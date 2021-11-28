@@ -1,0 +1,27 @@
+doctype html
+html
+    include ./templades/head.pug
+    
+    body(class="dark-theme")
+        div(class="container-fluid")
+            div(class="d-flex align-items-stretch")
+                nav(class="nav-bar")
+                    h5 78Station
+                    hr
+                    h6 Express:
+                    div /R/ - Random
+
+                main(class="chat-container")
+                    div(class="chat-content")
+                        div(class="file-preview" id="filePreview")
+
+                    div(class="chat-input")
+                        form(class="chat-form" action="" method="")
+                            div(class="d-flex")
+                                label(class="chat-file" for="dragFile")
+                                    div(class="drag-btn")
+                                input(type="text" placeholder="Anonymus" class="form-control" style="width:10%")
+                                input(type="file" id="dragFile" class="chat-file" style="display:none")        
+                                textarea(type="text" placeholder="Type anything.." class="form-control" id="threadContent" aria-describedby="dragFile")
+
+        script(src="/pub/manager.js")                              
