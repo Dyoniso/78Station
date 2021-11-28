@@ -9,7 +9,8 @@ html
                     h5 78Station
                     hr
                     h6 Express:
-                    div /R/ - Random
+                    each b in boards
+                        div /#{b.path}/ - #{b.name}
 
                 main(class="chat-container")
                     div(class="chat-content")

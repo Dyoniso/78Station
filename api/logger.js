@@ -51,6 +51,7 @@ class LoggerService {
         let strInfo = bgBlue + level
         if (info.level === 'debug') strInfo = bgYellow + level
         if (info.level === 'error') strInfo = bgRed + level
+        if (info.level === 'fatal') strInfo = bgRed + level
         if (info.level === 'ok') strInfo = bgMagenta + level
 
         let message = `${cyan}${dateFormat()} ${reset}| ${strInfo}${reset} |${red} ${strRoute} ${reset}| ${info.message} | `
