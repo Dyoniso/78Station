@@ -1,0 +1,13 @@
+div(class="thread-item" id="threadItem-"+thread.id)
+    hr
+    if (thread.fileInfo && thread.fileInfo !== '')
+        div(class="thread-file-info" id="fileInfo") File: #{thread.fileInfo.name} (#{thread.fileInfo.size}) Search:
+    div(class="wrap-content")
+        if (thread.fileInfo && thread.fileInfo !== '')
+            div(class="fix-img")
+                div(class="d-flex justify-content-center")
+                    img(src=`/files/${board}/${thread.fileInfo.name}`) 
+
+        div(class="thread-content")
+            small(class="user-info") (OP) #{thread.username} · #{thread.date} · No. #{thread.id}
+            div #{thread.content}

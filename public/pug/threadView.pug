@@ -12,17 +12,19 @@ html
                     each b in boards
                         div /#{b.path}/ - #{b.name}
 
-                main(class="chat-container")
-                    div(class="chat-content")
-                        div(class="file-preview" id="filePreview")
+                main(class="layer-container")
+                    input(type="hidden" id="boardPath" value=(path))
+                    div(class="file-preview" id="filePreview")
+                    div(class="layer-content" id="layerContent")
 
-                    div(class="chat-input")
-                        form(class="chat-form" action="" method="")
+                    div(class="thread-input")
+                        form(class="thread-form" action="" method="")
                             div(class="d-flex")
-                                label(class="chat-file" for="dragFile")
+                                label(class="thread-file" for="dragFile")
                                     div(class="drag-btn")
-                                input(type="text" placeholder="Anonymus" class="form-control" style="width:10%")
+                                input(type="text" id="threadUsername" placeholder="Anonymus" class="form-control" style="width:10%")
                                 input(type="file" id="dragFile" class="chat-file" style="display:none")        
-                                textarea(type="text" placeholder="Type anything.." class="form-control" id="threadContent" aria-describedby="dragFile")
+                                textarea(type="text" placeholder="Type anything.." class="form-control" id="threadContent")
 
+        script(src="/socket.io/socket.io.js")
         script(src="/pub/manager.js")                              

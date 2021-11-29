@@ -5,21 +5,27 @@
     --color-secondary-dark: #291044;
 }
 
+hr {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-top: 1px solid #ffffff2e;
+}
+
 .dark-theme {
     color: white;
     background: var(--color_primary);
 }
 
-.chat-container {
+.layer-container {
     width: 100%;
-    min-height: 100vh;
+    height: 100vh;
     transition: all .3s;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
 }
 
-.chat-content {
+.layer-content {
     position: relative;
     overflow: auto;
     min-width: 0;
@@ -35,13 +41,13 @@
     background:var(--color-secondary-dark);
 }
 
-.chat-input {
+.thread-input {
     min-width: 0;
     z-index: 2;
     background: var(--color-secondary-light);
 }
 
-.chat-file {
+.thread-file {
     border: 1px solid var(--color-secondary);
     display: flex;
     align-items: center;
@@ -80,8 +86,9 @@ textarea.form-control {
 
 .file-preview {
     position: absolute;
-    bottom: 0;
+    bottom: 40px;
     z-index: 2;
+    background: #00000077;
 }
 
 .file-info {
@@ -99,9 +106,32 @@ textarea.form-control {
 
 .file-preview img {
     padding: 8px;
-    max-width: 230px;
-    max-height: 200px;
+    max-width: 280px;
+    max-height: 180px;
     overflow: auto;
     border-radius: 16px;
 }
 
+.fix-img {
+    float: left;
+}
+
+.thread-item {
+    clear: left;
+    padding: 8px;
+}
+
+.thread-item img {
+    margin: 8px;
+    max-width: 250px;
+    max-height: 180px;
+    overflow: auto;
+}
+
+.thread-item .thread-content {
+    overflow: unset;
+    font-family: inherit;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}

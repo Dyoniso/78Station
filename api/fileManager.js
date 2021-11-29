@@ -26,58 +26,22 @@ exports.updateFileSystem = async(table) => {
         logger.info('Boards sync finished!')
 
     } catch (err) {
-        throw err
         logger.fatal('Error after check boards and file system', err)
     }
 }
 
-exports.registerFile = async(file) => {
-
-
-
-    /*let mime = file.mime.split('/')[0]
-    let path = filesPath + dirName.image + '/' + file.name
-    if (mime === 'video') path = filesPath + '/' + dirName.video + '/' + file.name
-    if (mime === 'audio') path = filesPath + '/' + dirName.audio + '/' + file.name
- 
+exports.registerFile = async(board, file) => {
+    let path = filesPath + '/' + board + '/' + file.name
     if (!fs.existsSync(path)) fs.writeFileSync(path, Buffer.from(file.base64, 'base64'))
-
-    let thumbName = ''
-    if (mime === 'video') {
-        try {
-            thumbName = await exports.generateThumb({ name : file.name })
-        } catch (err) {
-           logger.error('Error after create video thumb', err)        
-        }
-    }
-
-    logger.info(`File: ${file.name} successful registered! `)
-    return thumbName*/
+    logger.ok(`File: ${file.name} successful registered in file system `)
 }
 
-exports.deleteFile = async(file) => {
-
-
-    /*let thumbPath = ''
-    let mime = file.mime.split('/')[0]
-    let path = filesPath + dirName.image + '/' + file.name
-    if (mime === 'audio') path = filesPath + dirName.audio + '/' + file.name
-    if (mime === 'video') {
-        thumbPath = filesPath + dirName.thumb + '/' + file.thumb
-        path = filesPath + dirName.video + '/' + file.name
-    }
-    
+exports.deleteFile = async(board, file) => {
+    let path = filesPath + '/' + board + '/' + file.name
     if (fs.existsSync(path)) {
         fs.unlinkSync(path)
-        logger.info(`File: ${file.name} successful deleted! `)
+        logger.ok(`File: ${file.name} successful deleted! `)
     } else {
         logger.error(`Error after delete. File path not exists (Path: ${path})`)
     }
-
-    if (fs.existsSync(thumbPath)) {
-        fs.unlinkSync(thumbPath)
-        logger.info(`Video thumb: ${file.thumb} successful deleted!`)
-    } else if (file.thumb !== '') {
-        logger.info(`Error after delete video thumb. Thumb not exists (Path: ${path})`)
-    }*/
 }

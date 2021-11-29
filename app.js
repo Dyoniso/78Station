@@ -19,6 +19,7 @@ app.set('view engine', 'pug')
 app.set('views', __dirname + '/public/pug')
 app.set('view options', { pretty: true })
 
+app.use('/files', express.static('public/files'))
 app.use('/pub', express.static('public/lib'))
 app.use('/pub', express.static('public/js'))
 app.use('/pub', express.static('public/css'))
