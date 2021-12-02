@@ -6,12 +6,23 @@ const db = require('./database')
 const pug = require('pug')
 const fm = require('./fileManager')
 const utils = require('./utils')
+const sizeOf = require('image-size')
 
 const tables = require('./sync').tables
 const schema = require('./sync').schema
 
 const POST_MODE_THREAD = 'thread'
 const POST_MODE_REPLY = 'reply'
+
+const smm = {
+    FATAL : 'fatal',
+    ERROR : 'error',
+    SUCCESS : 'success'
+}
+
+const allowedFormats = {
+    IMAGE : ['jpeg','jpg','gif','bmp','png','webp']
+}
 
 app.get('/', (req, res) => {
     return renderLayerView(req, res)
@@ -117,11 +128,64 @@ function formatThreadReply(reply) {
     return rpy
 }
 
+async function checkBoardExists(board) {
+    let exists = false
+    try {
+        let q = await db.query(`SELECT path FROM ${tables.BOARD} WHERE path = $1`, [board])
+        exists = Boolean(q[0] && q[0].path)
+
+    } catch (err) {
+        logger.error('Error after check if board exists. Board: '+board)
+    }
+    return exists
+}
+
+function translateContent(content, option) {
+    if (!option) option = { board : '', threadId : -1 }
+
+    let threadId = option.threadId
+    let board = option.board
+
+    let rexhttp = new RegExp(/((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g)
+    let rexSpoiler = new RegExp(/\[spoiler\](.*)\[\/spoiler\]/g)
+    let rexRainbow = new RegExp(/\(\(\((.*)\)\)\)/g)
+
+    let rexIvQuote = new RegExp(/^&lt;(.*)$/mg)
+    let rexBold = new RegExp(/\*\*(.*)\*\*/g)
+    let rexItalic = new RegExp(/&#39;&#39;(.*)&#39;&#39;/g)
+    let rexThrough = new RegExp(/~~(.*)~~/g)
+    let rexStroke = new RegExp(/==(.*)==/g)
+    let rexUnderline = new RegExp(/__(.*)__/g)
+    let rexQuote = new RegExp(/^&gt;(.*)$/mg)
+    let rexQuoteReply = new RegExp(/^&gt;&gt;(\d+)/mg)
+    let rexQuoteTopic = new RegExp(/^&gt;&gt;&gt;(\d+)/mg)
+    let rexQuoteChain = new RegExp(/^&gt;&gt;&gt;\/([a-zA-Z]+)\/(\d+)/mg)
+
+    content = content
+    .replace(rexhttp, '<a href="$1">$1</a>')
+    .replace(rexSpoiler, '<span class="spoiler-content">$1</span>')
+    .replace(rexRainbow, '<span class="rainbow_text_animated">((($1)))</span>')
+    .replace(rexQuoteChain, `<a href="/boards/view?chain=$1&topic_id=$2" class="quote-chain" data-chain="$1">&gt;&gt;&gt;/$1/$2</a>`)
+    .replace(rexQuoteTopic, `<a href="/${board}/${threadId}#$1" class="quote-topic">&gt;&gt;&gt;$1</a>`)
+    .replace(rexQuoteReply, `<a href="/${board}/${threadId}#$1" class="quote-reply">&gt;&gt;$1</a>`)
+    .replace(rexQuote, '<span class="quote">&gt;$1</span>')
+    .replace(rexIvQuote, '<span class="iv-quote">&lt;$1</span>')
+    .replace(rexBold, '<span class="td-bold">$1</span>')
+    .replace(rexItalic, '<span class="td-italic">$1</span>')
+    .replace(rexStroke, '<span class="td-stroke">$1</span>')
+    .replace(rexUnderline, '<span class="td-underline">$1</span>')
+    .replace(rexThrough, '<span class="td-through">$1</span>')
+    return content
+}
+
+
 //Socket.io
 io.of('thread').on('connection', async(socket) => {
     let handshakeData = socket.request;
     let board = handshakeData._query['board']
     let threads = await getThreads(board, 10)
+
+    if (!(await checkBoardExists(board))) return throwMessage(smm.FATAL, `Selected board: ${board} not exists.`)
 
     let html = ''
     for(t of threads) {
@@ -133,7 +197,7 @@ io.of('thread').on('connection', async(socket) => {
         let id = parseInt(obj.thid)
 
         if (!id || id < 0 || isNaN(id)) id = -1
-        if (id < 0) {} //ERROR MESSAGE
+        if (id < 0) return throwMessage(smm.FATAL, 'Invalid thread id! ID: '+id, true) 
 
         let thread = await getThreadById(board, id)
         if (thread) {
@@ -143,7 +207,7 @@ io.of('thread').on('connection', async(socket) => {
             }))
             socket.insideThread = id
         } else {
-            //ERROR MESSAGE
+            return throwMessage(smm.FATAL, 'Thread not found! ID: '+id, true)
         }
     })
 
@@ -160,88 +224,141 @@ io.of('thread').on('connection', async(socket) => {
         }
     })
 
+    function throwMessage(mode, message, error) {
+        let channel = 'channel status message'
+        if (!error) error = false
+
+        let obj = { mode : mode, message : message }
+        switch (mode) {
+            case smm.FATAL:
+                socket.emit(channel, obj)
+                socket.disconnect()
+            case smm.ERROR:
+            case smm.SUCCESS:
+                return socket.emit(channel, obj)
+        }
+    }
+
+    function createFileInfo(file) {
+        let filename = file.name
+        let mime = file.result.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0]
+        let base64 = new Buffer.from(file.result.split(',')[1], 'base64')
+        let size = base64.length
+        let dims = { width : 0, height : 0, }
+
+        let allowed = false
+        for (f of allowedFormats.IMAGE) {
+            if (f === mime.split('/').pop()) {
+                allowed = true
+                break
+            }
+        }
+        if (allowed === false) return { error : 1, type : mime }
+
+        try {
+            dims = sizeOf(base64)
+
+        } catch (err) {
+            logger.error(`Error after get base64 dims.`)
+        }
+        if (!dims.width || dims.width < 0 || isNaN(dims.width)) dims.width = 0
+        if (!dims.width || dims.height < 0 || isNaN(dims.height)) dims.height = 0
+
+        return {
+            name : filename,
+            mime : mime,
+            base64 : base64,
+            size : size,
+            dims : dims
+        }
+    }
+
     async function addPost(obj, mode) {
         let username = obj.username
         let content = obj.content
         let file = obj.file
-        let board = obj.path
         let thid = -1
 
+        if (username <= 0) username = 'Anon'
         if (mode === POST_MODE_REPLY) thid = obj.thid
+        if (content.length <= 3) return throwMessage(smm.ERROR, 'Invalid thread. Write content longer than 3 characters')
+        if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
+        
+        content = translateContent(utils.htmlEnc(content), { board : board, threadId : thid })
 
         let fileInfo = ''
         let base64 = ''
         if (file !== null) {
-            base64 = new Buffer.from(file.result.split(',')[1], 'base64'),
-            fileInfo = {
-                name : file.name
+            fileInfo = createFileInfo(file)
+            if (fileInfo.error && fileInfo.error === 1) {
+                return throwMessage(smm.ERROR, 'Your image does not have a valid format! Format: '+fileInfo.type)
             }
-            fileInfo.size = base64.length
-            fileInfo.mime = file.result.match(/[^:/]\w+(?=;|,)/)[0]
+
+            base64 = fileInfo.base64
+            delete fileInfo.base64
         }
 
         try {
-            let q = await db.query(`SELECT id FROM ${tables.BOARD} WHERE path = $1`, [board])
-            if (q[0] && q[0].id) {
-                let q = []
+            let q = []
                 
-                if (mode === POST_MODE_REPLY) q = await db.query(`INSERT INTO ${schema.THREAD_REPLY}.${board}(thid, username,content,file_info) VALUES ($1, $2, $3, $4) RETURNING id,date,file_info`, [thid, username, content, fileInfo])
-                else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(title,username,content,file_info) VALUES ($1, $2, $3, $4) RETURNING id,date,file_info`, ['', username, content, fileInfo])
-                q = q[0]
+            if (mode === POST_MODE_REPLY) q = await db.query(`INSERT INTO ${schema.THREAD_REPLY}.${board}(thid, username,content,file_info) VALUES ($1, $2, $3, $4) RETURNING id,date,file_info`, [thid, username, content, fileInfo])
+            else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(title,username,content,file_info) VALUES ($1, $2, $3, $4) RETURNING id,date,file_info`, ['', username, content, fileInfo])
+            q = q[0]
 
-                let ctn = content
-                if (ctn.length > 120) ctn = ctn.substr(0, 120)
+            let ctn = content
+            if (ctn.length > 120) ctn = ctn.substr(0, 120)
 
-                if (fileInfo && fileInfo !== '') {
-                    await fm.registerFile(board, { name : fileInfo.name, base64 : base64 })
-                }
+            if (fileInfo && fileInfo !== '') {
+                await fm.registerFile(board, { name : fileInfo.name, base64 : base64 })
+            }
 
-                if (POST_MODE_REPLY) {
-                    logger.ok(`Reply: ${q.id} added in thread: ${thid}. Content: ${content}`)
+            if (mode === POST_MODE_REPLY) {
+                logger.ok(`Reply: ${q.id} added in thread: ${thid}. Content: ${content}`)
 
-                    let reply = formatThreadReply({
-                        id : q.id,
-                        thid : thid,
-                        username : username,
-                        content : content,
-                        file_info : q.file_info,
-                        date : q.date,
-                    })
-    
-                    for (socket of io.of('/thread').sockets.values()) {
-                        if (socket.insideThread === thid) {
-                            socket.emit('channel layer reply', pug.renderFile('./public/pug/templades/itemReply.pug', { 
-                                reply : reply,
-                                board : board,
-                            }))
-                        }
-                    }
+                let reply = formatThreadReply({
+                    id : q.id,
+                    thid : thid,
+                    username : username,
+                    content : content,
+                    file_info : q.file_info,
+                    date : q.date,
+                })
 
-                } else {
-                    logger.ok(`Thread created! No. ${ctn} Title: ${0} Content: ${content}`)
-
-                    let thread = formatThread({
-                        id : q.id,
-                        title : '',
-                        username : username,
-                        content : content,
-                        file_info : q.file_info,
-                        date : q.date,
-                    })
-    
-                    for (socket of io.of('/thread').sockets.values()) {
-                        socket.emit('channel layer thread', pug.renderFile('./public/pug/templades/itemThread.pug', { 
-                            thread : thread,
+                for (socket of io.of('/thread').sockets.values()) {
+                    if (socket.insideThread === thid) {
+                        socket.emit('channel layer reply', pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                            reply : reply,
                             board : board,
                         }))
                     }
-                } 
-            }
+                }
+
+            } else {
+                logger.ok(`Thread created! No. ${ctn} Title: ${0} Content: ${content}`)
+
+                let thread = formatThread({
+                    id : q.id,
+                    title : '',
+                    username : username,
+                    content : content,
+                    file_info : q.file_info,
+                    date : q.date,
+                })
+
+                for (socket of io.of('/thread').sockets.values()) {
+                    socket.emit('channel layer thread', pug.renderFile('./public/pug/templades/itemThread.pug', { 
+                        thread : thread,
+                        board : board,
+                    }))
+                }
+                return throwMessage(smm.SUCCESS, 'Thread Updated! ID: '+q.id)
+            } 
 
         } catch (err) {
             logger.error('Error in register thread in db', err)
         }
 
+        return throwMessage(smm.ERROR, 'Error in create thread!')
     }
 
     socket.on('channel add thread reply', async(obj) => {

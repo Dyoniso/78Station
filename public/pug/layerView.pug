@@ -16,13 +16,14 @@ html
                     input(type="hidden" id="boardPath" value=(path))
                     div(class="file-preview" id="filePreview")
                     div(class="layer-content" id="layerContent")
+                        h2(class="p-5 text-center") Welcome 78 Station
 
                     div(class="settings-box" style="display:none")
                         form(class="settings-form")
                             input(type="text" id="settingsUsername" placeholder="Username (Default: Anon)" class="form-control")
 
                     div(class="thread-input" style="display:none" id="postInput")
-                        div(class="post-message") TESTING - TESTING
+                        div(class="post-message" id="postMessage" style="display:none")
                         form(class="thread-form" action="" method="")
                             div(class="d-flex")
                                 label(class="thread-file" for="dragFile")

@@ -1,19 +1,13 @@
-:root {
-    --color_primary : #1b0b2c;
-    --color-secondary: #40186b;
-    --color-secondary-light: #5a2395;
-    --color-secondary-dark: #291044;
-}
 
 hr {
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
-    border-top: 1px solid #ffffff2e;
+    border-top: 1px solid var(--color-srollbar);
 }
 
 .dark-theme {
-    color: white;
-    background: var(--color_primary);
+    color: var(--color-primary);
+    background: var(--bgr-primary);
 }
 
 .layer-container {
@@ -31,29 +25,29 @@ hr {
     min-width: 0;
     height: 100%;
     z-index: 1;
-    background: var(--color-secondary);
+    background: var(--bgr-secondary);
 }
 
 .nav-bar {
     margin-right: 4px;
     padding: 8px;
     width: min-content;
-    background:var(--color-secondary-dark);
+    background:var(--bgr-secondary-dark);
 }
 
 .thread-input {
     min-width: 0;
     z-index: 2;
-    background: var(--color-secondary-light);
+    background: var(--bgr-secondary-light);
 }
 
 .thread-file {
-    border: 1px solid var(--color-secondary);
+    border: 1px solid var(--bgr-secondary);
     display: flex;
     align-items: center;
     margin: 0;
     cursor: pointer;
-    background: var(--color-secondary-light);
+    background: var(--bgr-secondary-light);
     padding: 8px;
 }
 
@@ -71,9 +65,9 @@ hr {
 
 .form-control {
     height: 40px;
-    border: 1px solid var(--color-secondary);
+    border: 1px solid var(--bgr-secondary);
     border-radius: 0;
-    background: var(--color-secondary-light);
+    background: var(--bgr-secondary-light);
     color: #d1d1d1!important;
 }
 
@@ -90,8 +84,8 @@ textarea.form-control {
 }
 
 .form-control:focus {
-    background: var(--color-secondary-light);
-    border: 1px solid var(--color-primary);
+    background: var(--bgr-secondary-light);
+    border: 1px solid var(--bgr-primary);
     color: white!important;
 }
 
@@ -132,11 +126,12 @@ textarea.form-control {
     padding: 8px;
 }
 
-.thread-item img {
+.thread-item .img-fit {
     margin: 8px;
     max-width: 250px;
     max-height: 180px;
     overflow: auto;
+    border-radius: 6px;
 }
 
 .thread-item .thread-content {
@@ -151,7 +146,7 @@ textarea.form-control {
     padding: 4px;
     font-size: 14px;
     font-weight: bold;
-    background: var(--color-secondary);
+    background: var(--bgr-secondary);
 }
 
 .settings-box {
@@ -159,14 +154,58 @@ textarea.form-control {
     bottom: 48px;
     right: 24px;
     border-radius: 8px;
-    background: var(--color-secondary-dark);
+    background: var(--bgr-secondary-dark);
     z-index: 4;
 }
 
+.message-box {
+    position: absolute;
+    top: 40%;
+    left: 40%;
+}
+
 .item-hover {
-    color: #ffffffbe;
+    color: var(--color-secondary);
     cursor: pointer;
 }
 .item-hover:hover {
-    color: #ffffffdc;
+    color: var(--color-primary);
+}
+
+.error-container { 
+    padding: 8px;
+}
+
+::-webkit-scrollbar {
+    height: 8px;  
+    width: 10px;
+    -webkit-appearance: none;
+}
+::-webkit-scrollbar-corner { 
+    background: var(--color-srollbar); 
+}
+::-webkit-scrollbar-thumb:horizontal{
+    background: var(--color-srollbar); 
+}
+::-webkit-scrollbar-track {
+    background: var(--color-srollbar); 
+}
+::-webkit-scrollbar-thumb {
+    background: var(--color-srollbar); 
+    height:100px;
+    border-radius:12px;
+}
+
+.thread-header {
+    font-size: 14px;
+    color: var(--color-primary);
+}
+
+.thread-header:hover {
+    color: var(--quote-thread);
+    cursor: pointer;
+}
+
+.pointer-effect {
+    cursor: pointer;
 }
