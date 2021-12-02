@@ -57,6 +57,12 @@ hr {
     padding: 8px;
 }
 
+.settings-btn {
+    background: url('/pub/settings_button.svg');
+    width: 22px;
+    height: 22px;
+}
+
 .drag-btn {
     background: url('/pub/plus_button.svg');
     width: 22px;
@@ -69,6 +75,11 @@ hr {
     border-radius: 0;
     background: var(--color-secondary-light);
     color: #d1d1d1!important;
+}
+
+.drag-file-preview {
+  outline : dashed #9e5dff;;
+  outline-offset : -10px;
 }
 
 textarea.form-control {
@@ -134,4 +145,28 @@ textarea.form-control {
     word-break: break-all;
     overflow-wrap: break-word;
     white-space: pre-wrap;
+}
+
+.post-message {
+    padding: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    background: var(--color-secondary);
+}
+
+.settings-box {
+    position: absolute;
+    bottom: 48px;
+    right: 24px;
+    border-radius: 8px;
+    background: var(--color-secondary-dark);
+    z-index: 4;
+}
+
+.item-hover {
+    color: #ffffffbe;
+    cursor: pointer;
+}
+.item-hover:hover {
+    color: #ffffffdc;
 }

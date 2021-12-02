@@ -6,25 +6,35 @@ html
         div(class="container-fluid")
             div(class="d-flex align-items-stretch")
                 nav(class="nav-bar")
-                    h5 78Station
+                    h5(class="logo") 78Station
                     hr
                     h6 Express:
                     each b in boards
-                        div /#{b.path}/ - #{b.name}
+                        div(class="item-hover" id="boardBtn" data-path=(b.path)) /#{b.path}/ - #{b.name}
 
                 main(class="layer-container")
                     input(type="hidden" id="boardPath" value=(path))
                     div(class="file-preview" id="filePreview")
                     div(class="layer-content" id="layerContent")
 
-                    div(class="thread-input")
+                    div(class="settings-box" style="display:none")
+                        form(class="settings-form")
+                            input(type="text" id="settingsUsername" placeholder="Username (Default: Anon)" class="form-control")
+
+                    div(class="thread-input" style="display:none" id="postInput")
+                        div(class="post-message") TESTING - TESTING
                         form(class="thread-form" action="" method="")
                             div(class="d-flex")
                                 label(class="thread-file" for="dragFile")
                                     div(class="drag-btn")
-                                input(type="text" id="threadUsername" placeholder="Anonymus" class="form-control" style="width:10%")
+
+                                input(type="text" id="postSubject" placeholder="Thread Subject" class="form-control" style="width:20%")
                                 input(type="file" id="dragFile" class="chat-file" style="display:none")        
                                 textarea(type="text" placeholder="Type anything.." class="form-control" id="threadContent")
 
+                                div(class="thread-file")
+                                    div(class="settings-btn" id="settingsBtn")
+
         script(src="/socket.io/socket.io.js")
         script(src="/pub/manager.js")                              
+#867474

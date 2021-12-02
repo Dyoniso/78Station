@@ -1,4 +1,4 @@
-div(class="thread-item" id="threadItem-"+thread.id)
+div(class="thread-view" id="thread-"+thread.id)
     hr
     if (thread.fileInfo && thread.fileInfo !== '')
         div(class="thread-file-info" id="fileInfo") File: #{thread.fileInfo.name} (#{thread.fileInfo.size}) Search:
@@ -9,5 +9,11 @@ div(class="thread-item" id="threadItem-"+thread.id)
                     img(src=`/files/${board}/${thread.fileInfo.name}`) 
 
         div(class="thread-content")
-            small(class="user-info") (OP) #{thread.username} · #{thread.date} · No. #{thread.id}
+            small(class="user-info item-hover" data-id=(thread.id)) (OP) #{thread.username} · #{thread.date} · No. #{thread.id}
             div #{thread.content}
+
+    hr
+    h4 Replys
+    div(id="threadReplies")
+
+    
