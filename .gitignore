@@ -1,4 +1,5 @@
 # Created By 7Retro Projects - Dyoniso
 logs/
 node_modules/
+public/files/
 .env
