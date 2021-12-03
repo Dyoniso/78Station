@@ -1,0 +1,15 @@
+div(class="reply-item" id="reply-"+reply.id)
+    if (reply.fileInfo && reply.fileInfo !== '')
+        - h = reply.fileInfo.dims ? reply.fileInfo.dims.height : 0
+        - w = reply.fileInfo.dims ? reply.fileInfo.dims.width : 0
+
+        - originUrl = `https://78Station.org/files/${board}/${reply.fileInfo.name}`
+        div(class="reply-file-info" id="fileInfo") File: !{`<a class="item-hover" href="/files/${board}/${reply.fileInfo.name}">${reply.fileInfo.name}</a>`} (#{reply.fileInfo.size} #{w} x #{h}px) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`}
+
+        div(class="fix-img")
+            div(class="d-flex justify-content-center")
+                img(class="img-fit" src=`/files/${board}/${reply.fileInfo.name}`) 
+
+    span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · R. #{reply.id}
+    div(class="thread-content")
+        pre #{reply.content}

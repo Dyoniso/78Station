@@ -1,7 +1,7 @@
 div(class="thread-item" id="threadItem-"+thread.id)
     hr
     if (thread.fileInfo && thread.fileInfo !== '')
-        - h = thread.fileInfo.dims ? thread.fileInfo.dims.heigth : 0
+        - h = thread.fileInfo.dims ? thread.fileInfo.dims.height : 0
         - w = thread.fileInfo.dims ? thread.fileInfo.dims.width : 0
 
         - originUrl = `https://78Station.org/files/${board}/${thread.fileInfo.name}`
@@ -15,4 +15,9 @@ div(class="thread-item" id="threadItem-"+thread.id)
 
         div(class="thread-content")
             small(class="thread-header" data-id=(thread.id)) !{`<span class="quote font-weight-bold">${thread.title}</span>`} (OP) !{`<span class="iv-quote">${thread.username}</span>`} · #{thread.date} · No. #{thread.id}
-            div !{thread.content}
+            pre !{thread.content}
+
+        if (replies)
+            div(class="small-reply-container")
+                each reply in replies
+                    include ./itemReply.pug

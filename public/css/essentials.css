@@ -134,7 +134,7 @@ textarea.form-control {
     border-radius: 6px;
 }
 
-.thread-item .thread-content {
+.thread-content {
     overflow: unset;
     font-family: inherit;
     word-break: break-all;
@@ -142,11 +142,15 @@ textarea.form-control {
     white-space: pre-wrap;
 }
 
+.thread-content pre {
+    color: var(--color-secondary);
+    font-size: 16px;
+}
+
 .post-message {
     padding: 4px;
     font-size: 14px;
     font-weight: bold;
-    background: var(--bgr-secondary);
 }
 
 .settings-box {
@@ -206,6 +210,37 @@ textarea.form-control {
     cursor: pointer;
 }
 
+.thread-view {
+    padding: 8px;
+    font-size: 16px;
+}
+
+.thread-view .img-fit {
+    margin: 8px;
+    max-width: 350px;
+    max-height: 280px;
+    overflow: auto;
+    border-radius: 6px;
+}
+
+.reply-container {
+    clear: left;
+}
+
+.reply-item {
+    border-left: 1px solid var(--color-secondary-dark);
+    margin: 4px;
+    background: var(--bgr-reply-box);
+    padding: 8px;
+    display: table;
+    overflow: hidden;
+}
+
 .pointer-effect {
     cursor: pointer;
+}
+
+.reply-container {
+    margin-top: 8px;
+    padding: 8px;
 }

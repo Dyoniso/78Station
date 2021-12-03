@@ -4,6 +4,7 @@ $(document).ready((e) => {
     let socket = null
     let boardPath = $('#boardPath').val()
     let defaultName = localStorage.defaultUsername
+    let selectedThid = -1
 
     let urlPath = location.pathname.split('/').pop()
 
@@ -80,13 +81,6 @@ $(document).ready((e) => {
         el.scrollTop(el[0].scrollHeight)
     }
 
-    let ltLayerThread = 'channel layer thread'
-    let ltThreadBegin = 'channel layer thread begin'
-    let ltLayerScroll = 'channel layer thread scroll'
-    let ltReplyBegin = 'channel layer reply begin'
-    let ltReply = 'channel layer reply'
-    let ltMessage = 'channel status message'
-
     function handleMessage(mode, message) {
         let error = false
 
@@ -127,13 +121,26 @@ $(document).ready((e) => {
         socket.on('connect_error', err => handleMessage(smm.FATAL, err))
         socket.on('connect_failed', err => handleMessage(smm.FATAL, err))
     }
+    
+    let ltLayerThread = 'channel layer thread'
+    let ltThreadBegin = 'channel layer thread begin'
+    let ltLayerScroll = 'channel layer thread scroll'
+    let ltReplyBegin = 'channel layer reply begin'
+    let ltThreadView = 'channel layer thread view'
+    let ltReply = 'channel layer reply'
+    let ltMessage = 'channel status message'
 
     function updateSocketListeners() {
-        socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
+        socket.off(ltThreadView).on(ltThreadView, (obj) => {
+            $('#layerContent').html(obj)
+            $('#postSubject').hide()
+        })
+        socket.off(ltReply).on(ltReply, (obj) => {
             console.log(obj)
+            $('#replyContent').append(obj)
         })
         socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
-            $('#layerContent').html(obj)
+            $('#replyContent').html(obj)
         })
         socket.off(ltLayerThread).on(ltLayerThread, (obj) => {
             $('#layerContent').append(obj)
@@ -141,6 +148,7 @@ $(document).ready((e) => {
         })
         socket.off(ltThreadBegin).on(ltThreadBegin, (obj) => {
             $('#layerContent').html(obj)
+            $('#postSubject').show()
             updateListeners()
         })
         socket.off(ltLayerScroll).on(ltLayerScroll, (obj) => {
@@ -158,10 +166,11 @@ $(document).ready((e) => {
 
     function updateListeners() {
         //Connect Thread
-        $('.user-info').off('click').on('click', (e) => {
+        $('.thread-header').off('click').on('click', (e) => {
             let id = $(e.target).data('id')
-            socket.emit('channel thread connect', { thid : id })
             mode = PAGE_MODE_REPLY
+            selectedThid = id
+            socket.emit('channel thread connect', { thid : id })
         })
     }
 
@@ -212,7 +221,6 @@ $(document).ready((e) => {
                         let content = $('#threadContent').val()
 
                         if (content.length <= 3) return handleMessage(smm.ERROR, 'Invalid thread. Write content longer than 3 characters')
-                        if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
 
                         let obj = {
                             username : $('#settingsUsername').val(),
@@ -220,11 +228,17 @@ $(document).ready((e) => {
                             title : title,
                             file : file,
                         }
-        
+                        
                         if (obj.username <= 0) obj.username = 'Anon'
         
                         let postType = 'channel add thread'
-                        if (mode === PAGE_MODE_REPLY) postType = 'channel add thread reply'
+                        if (mode === PAGE_MODE_REPLY) {
+                            obj.thid = selectedThid
+                            postType = 'channel add thread reply'
+                            delete obj.title
+
+                        } else if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
+
                         emitSocketData(postType, obj) 
                         clearInput()
                     }

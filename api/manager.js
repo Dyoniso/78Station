@@ -61,13 +61,15 @@ async function getThreadReplies(board, thid, limit) {
     let replies = []
     if (thid > 0) {
         try {
-            let q = await db.query(`SELECT * FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 LIMIT $2`, [thid, limit])
+            let q = await db.query(`SELECT * FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 ORDER BY id DESC LIMIT $2`, [thid, limit])
             if (q) for (r of q) replies.push(formatThreadReply(r))
 
         } catch (err) {
             logger.error('Error after get thread replies from thid: '+ thid, err)
         }
     }
+
+    replies.sort((x, y) => x.id - y.id)
     return replies
 }
 
@@ -76,14 +78,14 @@ async function getThreads(board, limit, offSet) {
 
     let threads = []
     try {
-        let rst = await db.query(`SELECT * FROM ${schema.BOARD}.${board} ORDER BY id DESC OFFSET $2 LIMIT $1`, [limit, offSet])
+        let rst = await db.query(`SELECT * FROM ${schema.BOARD}.${board} ORDER BY updated ASC OFFSET $2 LIMIT $1`, [limit, offSet])
         for (t of rst) threads.push(formatThread(t))
 
     } catch (err) {
         logger.error('Error after get thread data', err)
     }
 
-    threads.sort((x, y) => x.id - y.id)
+    threads.sort((x, y) => x.updated - y.updated)
     return threads
 }
 
@@ -103,6 +105,7 @@ function formatThread(thread) {
             rawSize : thread.file_info.size,
             size : utils.formatSize(thread.file_info.size),
             mime : thread.file_info.mime,
+            dims : thread.file_info.dims,
         }
     }
     return thd
@@ -123,6 +126,7 @@ function formatThreadReply(reply) {
             rawSize : reply.file_info.size,
             size : utils.formatSize(reply.file_info.size),
             mime : reply.file_info.mime,
+            dims : reply.file_info.dims,
         }
     }
     return rpy
@@ -183,15 +187,21 @@ function translateContent(content, option) {
 io.of('thread').on('connection', async(socket) => {
     let handshakeData = socket.request;
     let board = handshakeData._query['board']
-    let threads = await getThreads(board, 10)
+    socket.insideThread = -1
 
     if (!(await checkBoardExists(board))) return throwMessage(smm.FATAL, `Selected board: ${board} not exists.`)
 
-    let html = ''
-    for(t of threads) {
-       html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : 'b' })
+    async function updateThreadList(sock) {
+        let threads = await getThreads(board, 10)
+
+        let html = ''
+        for(t of threads) {
+            let replies = await getThreadReplies(board, t.id, 5)
+            html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : 'b', replies : replies })
+        }
+        sock.emit('channel layer thread begin', html)
     }
-    socket.emit('channel layer thread begin', html)
+    await updateThreadList(socket)
 
     socket.on('channel thread connect', async(obj) => {
         let id = parseInt(obj.thid)
@@ -201,11 +211,23 @@ io.of('thread').on('connection', async(socket) => {
 
         let thread = await getThreadById(board, id)
         if (thread) {
-            socket.emit('channel layer reply begin', pug.renderFile('./public/pug/templades/threadView.pug', {
+            socket.emit('channel layer thread view', pug.renderFile('./public/pug/templades/threadView.pug', {
                 thread : thread,
                 board : board,
             }))
             socket.insideThread = id
+
+            let replies = await getThreadReplies(board, id, 25)
+            let html = ''
+
+            for (r of replies) {
+                html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                    reply : r,
+                    board : board
+                 })
+            }
+            socket.emit('channel layer reply begin', html)
+            
         } else {
             return throwMessage(smm.FATAL, 'Thread not found! ID: '+id, true)
         }
@@ -233,9 +255,12 @@ io.of('thread').on('connection', async(socket) => {
             case smm.FATAL:
                 socket.emit(channel, obj)
                 socket.disconnect()
+                break
+                
             case smm.ERROR:
             case smm.SUCCESS:
-                return socket.emit(channel, obj)
+                socket.emit(channel, obj)
+                break
         }
     }
 
@@ -275,14 +300,19 @@ io.of('thread').on('connection', async(socket) => {
 
     async function addPost(obj, mode) {
         let username = obj.username
+        let title = obj.title
         let content = obj.content
         let file = obj.file
         let thid = -1
 
         if (username <= 0) username = 'Anon'
-        if (mode === POST_MODE_REPLY) thid = obj.thid
+        if (mode === POST_MODE_REPLY) {
+            thid = parseInt(obj.thid)
+            if (thid < 0 || isNaN(thid)) return throwMessage(smm.ERROR, 'Invalid thread id. ID: '+thid)
+        }
+        else if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
         if (content.length <= 3) return throwMessage(smm.ERROR, 'Invalid thread. Write content longer than 3 characters')
-        if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
+        if (!title || title.length === 0) title = ''
         
         content = translateContent(utils.htmlEnc(content), { board : board, threadId : thid })
 
@@ -299,10 +329,11 @@ io.of('thread').on('connection', async(socket) => {
         }
 
         try {
+            let now = new Date().getTime()
             let q = []
                 
             if (mode === POST_MODE_REPLY) q = await db.query(`INSERT INTO ${schema.THREAD_REPLY}.${board}(thid, username,content,file_info) VALUES ($1, $2, $3, $4) RETURNING id,date,file_info`, [thid, username, content, fileInfo])
-            else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(title,username,content,file_info) VALUES ($1, $2, $3, $4) RETURNING id,date,file_info`, ['', username, content, fileInfo])
+            else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(title,username,content,file_info,updated) VALUES ($1, $2, $3, $4, $5) RETURNING id,date,file_info`, [title, username, content, fileInfo, now])
             q = q[0]
 
             let ctn = content
@@ -314,6 +345,8 @@ io.of('thread').on('connection', async(socket) => {
 
             if (mode === POST_MODE_REPLY) {
                 logger.ok(`Reply: ${q.id} added in thread: ${thid}. Content: ${content}`)
+                
+                await db.query(`UPDATE ${schema.BOARD}.${board} SET updated = $2 WHERE id = $1`, [thid, now])
 
                 let reply = formatThreadReply({
                     id : q.id,
@@ -324,9 +357,14 @@ io.of('thread').on('connection', async(socket) => {
                     date : q.date,
                 })
 
-                for (socket of io.of('/thread').sockets.values()) {
-                    if (socket.insideThread === thid) {
-                        socket.emit('channel layer reply', pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                throwMessage(smm.SUCCESS, `Reply Updated! ID: ${reply.id} in Thread: ${thid}`)
+
+                for (s of io.of('/thread').sockets.values()) {
+                    if (s.insideThread === -1) {
+                        updateThreadList(s)
+
+                    } else if (s.insideThread === thid) {
+                        s.emit('channel layer reply', pug.renderFile('./public/pug/templades/itemReply.pug', { 
                             reply : reply,
                             board : board,
                         }))
@@ -345,20 +383,22 @@ io.of('thread').on('connection', async(socket) => {
                     date : q.date,
                 })
 
-                for (socket of io.of('/thread').sockets.values()) {
-                    socket.emit('channel layer thread', pug.renderFile('./public/pug/templades/itemThread.pug', { 
-                        thread : thread,
-                        board : board,
-                    }))
+                throwMessage(smm.SUCCESS, 'Thread Updated! ID: '+thread.id)
+
+                for (s of io.of('/thread').sockets.values()) {
+                    if (s.insideThread === -1) {
+                        s.emit('channel layer thread', pug.renderFile('./public/pug/templades/itemThread.pug', { 
+                            thread : thread,
+                            board : board,
+                        }))
+                    }
                 }
-                return throwMessage(smm.SUCCESS, 'Thread Updated! ID: '+q.id)
             } 
 
         } catch (err) {
             logger.error('Error in register thread in db', err)
+            throwMessage(smm.ERROR, 'Error in create thread!')
         }
-
-        return throwMessage(smm.ERROR, 'Error in create thread!')
     }
 
     socket.on('channel add thread reply', async(obj) => {
