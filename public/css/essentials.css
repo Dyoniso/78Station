@@ -29,9 +29,9 @@ hr {
 }
 
 .nav-bar {
-    margin-right: 4px;
+    margin-right: 2px;
     padding: 8px;
-    width: min-content;
+    min-width: 180px;
     background:var(--bgr-secondary-dark);
 }
 
@@ -114,7 +114,6 @@ textarea.form-control {
     max-width: 280px;
     max-height: 180px;
     overflow: auto;
-    border-radius: 16px;
 }
 
 .fix-img {
@@ -123,7 +122,7 @@ textarea.form-control {
 
 .thread-item {
     clear: left;
-    padding: 8px;
+    padding: 8px 8px 0 8px;
 }
 
 .thread-item .img-fit {
@@ -131,7 +130,6 @@ textarea.form-control {
     max-width: 250px;
     max-height: 180px;
     overflow: auto;
-    border-radius: 6px;
 }
 
 .thread-content {
@@ -243,4 +241,9 @@ textarea.form-control {
 .reply-container {
     margin-top: 8px;
     padding: 8px;
+}
+
+.latency-status {
+    font-size: 12px;
+    margin-right: 4px;
 }

@@ -1,6 +1,7 @@
 $(document).ready((e) => {
     let shiftKey = false
     let isFinish = true
+    let connected = false
     let socket = null
     let boardPath = $('#boardPath').val()
     let defaultName = localStorage.defaultUsername
@@ -112,16 +113,31 @@ $(document).ready((e) => {
     }
 
     function connectSocket(board) {
+        if (socket) socket.disconnect()
+
         socket = io('/thread', { query : { board : board } })
-        socket.on('connect', () => {
+        socket.off('connect').on('connect', () => {
             updateSocketListeners()
             boardPath = board
+            connected = true
+            scrollLock = false
+            initLatencyStatus()
             initApp()
         })
-        socket.on('connect_error', err => handleMessage(smm.FATAL, err))
-        socket.on('connect_failed', err => handleMessage(smm.FATAL, err))
+        socket.off('connect_error').on('connect_error', err => {
+            handleMessage(smm.FATAL, err)
+            connected = false
+        })
+        socket.off('connect_failed').on('connect_failed', err => {
+            handleMessage(smm.FATAL, err)
+            connected = false
+        })
+        socket.on('disconnect', (err) => {
+            connected = false
+        })
     }
     
+    let ltLatency = 'channel latency'
     let ltLayerThread = 'channel layer thread'
     let ltThreadBegin = 'channel layer thread begin'
     let ltLayerScroll = 'channel layer thread scroll'
@@ -130,13 +146,30 @@ $(document).ready((e) => {
     let ltReply = 'channel layer reply'
     let ltMessage = 'channel status message'
 
+    let pingInterval = null
+    function initLatencyStatus() {
+        if (pingInterval !== null) finalizeLatencyStatus()
+
+        let el = $('#boardItem-'+boardPath)
+        el.children('.pulse').css({ background : '#4bd6a3' })
+
+        pingInterval = setInterval(() => {
+            socket.emit(ltLatency, { current : Date.now() })
+        }, 10000)
+    }
+
+    function finalizeLatencyStatus() {
+        clearInterval(pingInterval)
+        $('.pulse').css({ background : '#cc2c2c' }) 
+        $('.latency-status').text('')
+    }
+
     function updateSocketListeners() {
         socket.off(ltThreadView).on(ltThreadView, (obj) => {
             $('#layerContent').html(obj)
             $('#postSubject').hide()
         })
         socket.off(ltReply).on(ltReply, (obj) => {
-            console.log(obj)
             $('#replyContent').append(obj)
         })
         socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
@@ -145,10 +178,13 @@ $(document).ready((e) => {
         socket.off(ltLayerThread).on(ltLayerThread, (obj) => {
             $('#layerContent').append(obj)
             scrollLock = false
+            updateVisibility()
+            updateListeners()
         })
         socket.off(ltThreadBegin).on(ltThreadBegin, (obj) => {
             $('#layerContent').html(obj)
             $('#postSubject').show()
+            updateVisibility()
             updateListeners()
         })
         socket.off(ltLayerScroll).on(ltLayerScroll, (obj) => {
@@ -159,9 +195,34 @@ $(document).ready((e) => {
             setTimeout(() => scrollFetched = true, 3000)
         })
         socket.off(ltMessage).on(ltMessage, (obj) => {
-            console.log(obj)
             handleMessage(obj.mode, obj.message)
         })
+        socket.off(ltLatency).on(ltLatency, (obj) => {
+            let latency = obj.latency
+            let el = $('#boardItem-'+boardPath)
+
+            let color = '#4dd64b'
+            if (latency > 300) color = '#fcdb38'
+            if (latency > 600) color = '#ee3434'
+            el.children('.pulse').css({ background : color })
+            el.children('.latency-status').text(latency + ' ms')
+        })
+    }
+
+    function updateVisibility() {
+        //DEF STORAGE ITEM
+        let storageItems = JSON.parse(localStorage.getItem(`hid-${boardPath}`))
+        if (!storageItems) {
+            localStorage.setItem(`hid-${boardPath}`, JSON.stringify([]))
+            storageItems = []
+        }
+        
+        for (r of storageItems) {
+            try {
+                $("#"+r).find('.btnVisibility').html(`<img src="/pub/btn_show.png" class="mb-1 pointer-effect"/>`)
+                $("#"+r).children('.wrap-content').hide()
+            } catch (err) {}
+        } 
     }
 
     function updateListeners() {
@@ -171,6 +232,26 @@ $(document).ready((e) => {
             mode = PAGE_MODE_REPLY
             selectedThid = id
             socket.emit('channel thread connect', { thid : id })
+        })
+
+        $('.btnVisibility').on('click', (e) => {
+            let t = $(e.target)
+            let el = t.parents('.thread-item').children('.wrap-content')
+            let atrId = t.parents('.thread-item').attr('id')
+
+            let storageItems = JSON.parse(localStorage.getItem(`hid-${boardPath}`))
+            if (el.is(':visible')) {
+                storageItems.push(atrId)
+
+                t.replaceWith(`<img src="/pub/btn_show.png" class="mb-1 pointer-effect"/>`)
+                el.hide()
+            } else {
+                if (storageItems.includes(atrId)) storageItems = storageItems.filter((i) => i !== atrId)
+
+                t.replaceWith(`<img src="/pub/btn_hide.png" class="mb-1 pointer-effect"/>`)
+                el.show()
+            }
+            localStorage.setItem(`hid-${boardPath}`, JSON.stringify(storageItems))
         })
     }
 
@@ -188,14 +269,9 @@ $(document).ready((e) => {
         if (e.originalEvent.wheelDelta >= 0) scrollLock = true
     })
 
-    $('#boardBtn').on('click', (e) => {
+    $('.boardBtn').on('click', (e) => {
         let board = $(e.target).data('path')
-        if (board !== boardPath) {
-            connectSocket(board)
-
-        } if (mode === PAGE_MODE_REPLY) {
-
-        }
+        connectSocket(board)
         mode = PAGE_MODE_THREAD
     })
 
@@ -241,6 +317,7 @@ $(document).ready((e) => {
 
                         emitSocketData(postType, obj) 
                         clearInput()
+                        scrollLock = false
                     }
         
                     if (file) {
@@ -315,6 +392,8 @@ $(document).ready((e) => {
     function finalizeApp() {
         if (isFinish === false) {
             isFinish = true
+
+            finalizeLatencyStatus()
 
             $('#postInput').slideToggle(100)
 

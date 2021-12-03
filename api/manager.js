@@ -197,11 +197,23 @@ io.of('thread').on('connection', async(socket) => {
         let html = ''
         for(t of threads) {
             let replies = await getThreadReplies(board, t.id, 5)
-            html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : 'b', replies : replies })
+            html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board, replies : replies })
         }
         sock.emit('channel layer thread begin', html)
     }
     await updateThreadList(socket)
+
+    socket.latencyLimit = 1000
+    socket.latencyCount = 0
+    socket.on('channel latency', (obj) => {
+        let latency = 0
+        if (socket.latencyCount <= socket.latencyLimit) {
+            let old = parseInt(obj.current)
+            if (old < 0 || isNaN(old)) old = 0
+            latency = Date.now() - old   
+        }
+        socket.emit('channel latency', { latency : latency }) 
+    })
 
     socket.on('channel thread connect', async(obj) => {
         let id = parseInt(obj.thid)

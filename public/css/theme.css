@@ -12,6 +12,9 @@
 .bgr-secondary-light {
     background-color: var(--bgr-secondary-light);
 }
+.bgr-accent {
+    background-color: var(--color-accent);
+}
 
 .color-primary {
     color : var(--color-primary)!important;

@@ -1,22 +1,30 @@
 doctype html
 html
     include ./templades/head.pug
+    link(type="text/css" rel="stylesheet" href="/pub/pulse.css")
     
     body(class="dark-theme")
         div(class="container-fluid")
             div(class="d-flex align-items-stretch")
                 nav(class="nav-bar")
-                    h5(class="logo") 78Station
+                    h5(class="logo") 78Express Boards
                     hr
-                    h6 Express:
                     each b in boards
-                        div(class="item-hover" id="boardBtn" data-path=(b.path)) /#{b.path}/ - #{b.name}
+                        div(class="board-item d-flex align-items-center" id="boardItem-"+b.path)
+                            div(class="pulse")
+                            div(class="latency-status")
+                            div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ - #{b.name}
 
                 main(class="layer-container")
                     input(type="hidden" id="boardPath" value=(path))
                     div(class="file-preview" id="filePreview")
+
                     div(class="layer-content" id="layerContent")
-                        h2(class="p-5 text-center") Welcome 78 Station
+                        div(class="p-3 text-center")
+                            hr
+                            include ./templades/faq.pug
+                            hr
+                            include ./templades/fotter.pug
 
                     div(class="settings-box" style="display:none")
                         form(class="settings-form")
