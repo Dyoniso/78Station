@@ -7,6 +7,7 @@ const pug = require('pug')
 const fm = require('./fileManager')
 const utils = require('./utils')
 const sizeOf = require('image-size')
+const middle = require('./middle')
 
 const tables = require('./sync').tables
 const schema = require('./sync').schema
@@ -23,6 +24,10 @@ const smm = {
 const allowedFormats = {
     IMAGE : ['jpeg','jpg','gif','bmp','png','webp']
 }
+
+app.all('*', middle.uidGen, async(req, res, next) => {
+    return next()      
+})
 
 app.get('/', (req, res) => {
     return renderLayerView(req, res)
@@ -184,24 +189,64 @@ function translateContent(content, option) {
 
 
 //Socket.io
+io.of('thread').use((socket, next) => {
+    return middle.uidGenSocket(socket, next)
+})
+
 io.of('thread').on('connection', async(socket) => {
     let handshakeData = socket.request;
     let board = handshakeData._query['board']
+    let uid = socket.uid
     socket.insideThread = -1
+    socket.board = board
 
     if (!(await checkBoardExists(board))) return throwMessage(smm.FATAL, `Selected board: ${board} not exists.`)
 
-    async function updateThreadList(sock) {
-        let threads = await getThreads(board, 10)
+    async function updateReplyList(thid) {
+        let replies = await getThreadReplies(board, thid, 25)
+        let html = formatReplyToHtml(replies)
 
+        for (s of io.of('/thread').sockets.values()) {
+            if (s.insideThread === thid && s.board === board) {
+                s.emit('channel layer reply begin', html)
+            }
+        }
+    }
+
+    async function updateThreadList() {
+        let threads = await getThreads(board, 10)
+        let html = formatThreadToHtml(threads)
+
+        for (s of io.of('/thread').sockets.values()) {
+            if (s.insideThread === -1 && s.board === board) {
+                s.emit('channel layer thread begin', html)
+            }
+        }
+    }
+
+    function formatReplyToHtml(replies) {
+        let html = ''
+        for (r of replies) {
+            html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                reply : r,
+                board : board
+            })
+        }
+        return html
+    }
+
+    async function formatThreadToHtml(threads) {
         let html = ''
         for(t of threads) {
             let replies = await getThreadReplies(board, t.id, 5)
             html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board, replies : replies })
         }
-        sock.emit('channel layer thread begin', html)
+        return html
     }
-    await updateThreadList(socket)
+
+    let threads = await getThreads(board, 10)
+    let html = await formatThreadToHtml(threads)
+    socket.emit('channel layer thread begin', html)
 
     socket.latencyLimit = 1000
     socket.latencyCount = 0
@@ -213,6 +258,79 @@ io.of('thread').on('connection', async(socket) => {
             latency = Date.now() - old   
         }
         socket.emit('channel latency', { latency : latency }) 
+    })
+
+    socket.on('channel post delete', async(obj) => {
+        let threads = obj.threads
+        let replies = obj.replies
+        let password = obj.password
+
+        if (Array.isArray(threads) === false) return throwMessage('Invalid thread request')
+        if (Array.isArray(replies) === false) return throwMessage('Invalid reply request')
+
+        let delCountThreads = 0
+        let delCountReplies = 0
+        let threadUpdate = []
+
+        logger.info('Starting del thread sync from items: '+JSON.stringify(threads))
+        for (t of threads) {
+            try {
+                let q = await db.query(`DELETE FROM ${schema.BOARD}.${board} WHERE id = $1 AND password = $2 RETURNING file_info,id`, [t.id, password])
+                q = q[0]
+
+                if (q && q.file_info && q.file_info !== '') {
+                    let fileInfo = JSON.parse(q[0].file_info)
+                    await fm.deleteFile(board, { name : fileInfo.name })
+                }
+
+                if (q && q.id && q.id > 0) {
+                    logger.ok(`* Thread Deleted! ID: ${t.id}`)
+                    delCountThreads++
+                    let rs = await db.query(`DELETE FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 RETURNING file_info,id`, [t.id])
+                    for (r of rs) {
+                        if (r.file_info && r.file_info !== '') {
+                            let fileInfo = JSON.parse(q[0].file_info)
+                            await fm.deleteFile(board, { name : fileInfo.name })   
+                        }
+                        delCountReplies++
+                        logger.ok(`* Reply Deleted! Thid: ${t.id} ID: ${r.id}`)
+                    }
+                }
+
+            } catch (err) {
+                logger.error('Error after delete thread item. ID: '+t.id, err)
+            }
+        }
+
+        logger.info('Starting del reply sync from items: '+JSON.stringify(replies))
+        for (r of replies) {
+            try {
+                let q = await db.query(`DELETE FROM ${schema.THREAD_REPLY}.${board} WHERE id = $1 AND password = $3 AND thid = $2 RETURNING file_info,id`, [r.id, r.thid, password])
+                q = q[0]
+
+                if (q && q.file_info && q.file_info !== '') {
+                    fileInfo = JSON.parse(q[0].file_info)
+                    await fm.deleteFile(board, { name : fileInfo.name })
+                }
+                if (q && q.id && q.id > 0) {
+                    logger.ok(`* Reply Deleted! ID: ${r.id} Thid: ${r.thid}`)
+                    delCountReplies++
+                    if (!threadUpdate.includes(r.thid)) threadUpdate.push(r.thid)
+                }
+
+            } catch (err) {
+                logger.error(`Error after delete reply item. ID: ${r.id} Thid: ${r.thid}`, err)
+            }
+        }
+
+        if (delCountThreads <= 0 || delCountReplies <= 0) throwMessage(smm.ERROR, 'Wrong password. Check if you wrote correctly')
+        else {
+            if (delCountThreads > 0) updateThreadList()
+            else if (delCountReplies > 0) {
+                updateThreadList()
+                for (t of threadUpdate) updateReplyList(t)
+            }
+        }
     })
 
     socket.on('channel thread connect', async(obj) => {
@@ -228,10 +346,9 @@ io.of('thread').on('connection', async(socket) => {
                 board : board,
             }))
             socket.insideThread = id
-
             let replies = await getThreadReplies(board, id, 25)
-            let html = ''
 
+            let html = ''
             for (r of replies) {
                 html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { 
                     reply : r,
@@ -313,11 +430,13 @@ io.of('thread').on('connection', async(socket) => {
     async function addPost(obj, mode) {
         let username = obj.username
         let title = obj.title
+        let password = obj.password
         let content = obj.content
         let file = obj.file
         let thid = -1
 
         if (username <= 0) username = 'Anon'
+        if (!password || password.length <= 0) password = utils.generateHash(14)
         if (mode === POST_MODE_REPLY) {
             thid = parseInt(obj.thid)
             if (thid < 0 || isNaN(thid)) return throwMessage(smm.ERROR, 'Invalid thread id. ID: '+thid)
@@ -344,8 +463,8 @@ io.of('thread').on('connection', async(socket) => {
             let now = new Date().getTime()
             let q = []
                 
-            if (mode === POST_MODE_REPLY) q = await db.query(`INSERT INTO ${schema.THREAD_REPLY}.${board}(thid, username,content,file_info) VALUES ($1, $2, $3, $4) RETURNING id,date,file_info`, [thid, username, content, fileInfo])
-            else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(title,username,content,file_info,updated) VALUES ($1, $2, $3, $4, $5) RETURNING id,date,file_info`, [title, username, content, fileInfo, now])
+            if (mode === POST_MODE_REPLY) q = await db.query(`INSERT INTO ${schema.THREAD_REPLY}.${board}(thid, uid, username,content,file_info,password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id,date,file_info`, [thid, uid, username, content, fileInfo, password])
+            else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(uid, title,username,content,file_info,password,updated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id,date,file_info`, [title, uid, username, content, fileInfo, password, now])
             q = q[0]
 
             let ctn = content
@@ -371,9 +490,15 @@ io.of('thread').on('connection', async(socket) => {
 
                 throwMessage(smm.SUCCESS, `Reply Updated! ID: ${reply.id} in Thread: ${thid}`)
 
+                let threads = await getThreads(board, 10)
                 for (s of io.of('/thread').sockets.values()) {
                     if (s.insideThread === -1) {
-                        updateThreadList(s)
+                        let html = ''
+                        for(t of threads) {
+                            let replies = await getThreadReplies(board, t.id, 5)
+                            html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board, replies : replies })
+                        }
+                        sock.emit('channel layer thread begin', html)
 
                     } else if (s.insideThread === thid) {
                         s.emit('channel layer reply', pug.renderFile('./public/pug/templades/itemReply.pug', { 

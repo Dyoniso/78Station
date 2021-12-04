@@ -6,6 +6,7 @@ $(document).ready((e) => {
     let boardPath = $('#boardPath').val()
     let defaultName = localStorage.defaultUsername
     let selectedThid = -1
+    let delObj = { threads : [], replies : [] }
 
     let urlPath = location.pathname.split('/').pop()
 
@@ -28,7 +29,24 @@ $(document).ready((e) => {
         }
 
         if (urlPath !== '') connectSocket(urlPath)
+
+        let password = localStorage.defaultPassword
+        if (!password || password.length <= 0) {
+            password = generateHash(8)
+            localStorage.defaultPassword = password
+        }
+        $('#settingsPassword').val(password)
     })()
+
+    function generateHash(length) {
+        let result = '';
+        let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let charactersLength = characters.length;
+        for (let i = 0; i < length; i++ ) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result
+    }
 
     function emitSocketData(channel, obj) {
         socket.emit(channel, obj)
@@ -225,6 +243,8 @@ $(document).ready((e) => {
         } 
     }
 
+    let settingsLock = false
+
     function updateListeners() {
         //Connect Thread
         $('.thread-header').off('click').on('click', (e) => {
@@ -252,6 +272,39 @@ $(document).ready((e) => {
                 el.show()
             }
             localStorage.setItem(`hid-${boardPath}`, JSON.stringify(storageItems))
+        })
+
+        $('.delTopic').find('input[type=checkbox]').off('change').on('change', (e) => {
+            let el = $(e.target)
+            let thid = parseInt(el.parents('.delTopic').data('id'))
+            let type = el.data('type')
+
+            if (type === PAGE_MODE_THREAD) {
+                if (el.prop('checked')) delObj.threads.push({ id : thid })
+                else delObj.threads = delObj.threads.filter((i) => i.id !== thid)
+
+            } else {
+                let rid = parseInt($(e.target).parents('.reply-item').data('id'))
+                if (el.prop('checked')) delObj.replies.push({ thid : thid, id : rid })
+                else delObj.replies = delObj.replies.filter((i) => i.id !== rid) 
+            }
+
+            let elS = $('.settings-box')
+            if (delObj.threads.length > 0 || delObj.replies.length > 0) {
+                settingsLock = true
+                $('#btnDelete').show()
+                $('#delInfo').html(`
+                    Thread (${delObj.threads.length})
+                    Reply (${delObj.replies.length})
+                `)
+                if (!elS.is(':visible')) elS.slideToggle(100)
+
+            } else {
+                settingsLock = false
+                $('#delInfo').text('')
+                $('#btnDelete').hide()
+                if (elS.is(':visible')) elS.slideToggle(100)
+            }   
         })
     }
 
@@ -283,10 +336,10 @@ $(document).ready((e) => {
             $('#settingsUsername').val(defaultName)
             $('#postInput').slideToggle(100)
 
-            $('#threadUsername').on('keypress', (e) => {
+            $('#threadUsername').off('keypress').on('keypress', (e) => {
                 if (e.keyCode === 13) e.preventDefault()
             })
-            $('#threadContent').on('keypress', (e) => {
+            $('#threadContent').off('keypress').on('keypress', (e) => {
                 if (shiftKey === false && e.keyCode === 13) {
                     e.preventDefault()
         
@@ -341,24 +394,30 @@ $(document).ready((e) => {
                 selectedBoard = ''
             })
 
-            $('#settingsBtn').on('click', (e) => {
+            $('#btnDelete').off('click').on('click', (e) => {
+                if (delObj.threads.length > 0 || delObj.replies.length > 0) {
+                    emitSocketData('channel post delete', delObj)
+                }
+            })
+
+            $('#settingsBtn').off('click').on('click', (e) => {
                 let el = $('.settings-box')
                 el.slideToggle(100)
                 $('#settingsUsername').val(defaultName)
             })
 
-            $('#dragFile').on('change', (e) => {
+            $('#dragFile').off('change').on('change', (e) => {
                 addFile(e.target.files[0])
             })
 
-            $(document).on('keyup keydown', (e) => {
+            $(document).off('keyup keydown').on('keyup keydown', (e) => {
                 shiftKey = e.shiftKey
 
-            }).on('dragleave', (e) => {
+            }).off('dragleave').on('dragleave', (e) => {
                 e.preventDefault()
                 $('#layerContent').removeClass('drag-file-preview')
 
-            }).on('drop', (e) => {
+            }).off('drop').on('drop', (e) => {
                 $('#layerContent').removeClass('drag-file-preview')
                 e.preventDefault()
         
@@ -367,20 +426,25 @@ $(document).ready((e) => {
                     addFile(dt.files[0])
                 }
 
-            }).on('dragover', (e) => {
+            }).off('dragover').on('dragover', (e) => {
                 e.preventDefault()
                 $('#layerContent').addClass('drag-file-preview')
 
-            }).on('click', (e) => {
+            }).off('click').on('click', (e) => {
                 let el = $(e.target)
                 if (el.attr('id') !== 'settingsUsername'
-                    && el.attr('id') !== 'settingsBtn' && $('.settings-box').is(':visible')) {
+                    && el.attr('id') !== 'settingsBtn' 
+                    && el.attr('id') !== 'settingsPassword' 
+                    && !(el.attr('class').includes('del-value'))
+                    && $('.settings-box').is(':visible')) {
                         let username = $('#settingsUsername').val()
                         if (!username || username === '') username = 'Anon'
                         localStorage.defaultUsername = username
                         defaultName = username
-                        $('.settings-box').slideToggle(100)
+
+                        if (settingsLock === false) $('.settings-box').slideToggle(100)
                 }
+                localStorage.defaultPassword = $('#settingsPassword').val()
             })
 
             setInterval(() => {
@@ -394,6 +458,7 @@ $(document).ready((e) => {
             isFinish = true
 
             finalizeLatencyStatus()
+            clearInput()
 
             $('#postInput').slideToggle(100)
 

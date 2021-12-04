@@ -29,6 +29,11 @@ html
                     div(class="settings-box" style="display:none")
                         form(class="settings-form")
                             input(type="text" id="settingsUsername" placeholder="Username (Default: Anon)" class="form-control")
+                            input(type="password" id="settingsPassword" placeholder="Post Password" class="form-control")
+                            div(class="d-flex")
+                                div(class="ml-auto")
+                                    small(class="p-2" id="delInfo")
+                                    span(class="m-2 btn btn-danger font-weight-bold" id="btnDelete" style="display:none") DELETE
 
                     div(class="thread-input" style="display:none" id="postInput")
                         div(class="post-message" id="postMessage" style="display:none")
