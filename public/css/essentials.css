@@ -116,9 +116,20 @@ textarea.form-control {
 
 .file-preview img {
     padding: 8px;
+    min-width: 120px;
+    min-height: 80px;
     max-width: 280px;
     max-height: 180px;
     overflow: auto;
+}
+
+.file-preview video {
+    padding: 8px;
+    min-width: 220px;
+    min-height: 180px;
+    max-width: 380px;
+    max-height: 280px;
+    object-fit: contain;
 }
 
 .fix-img {
@@ -130,11 +141,27 @@ textarea.form-control {
     padding: 8px 8px 0 8px;
 }
 
-.thread-item .img-fit {
+.img-fit {
     margin: 8px;
     max-width: 250px;
     max-height: 180px;
+    min-width: 150px;
+    min-height: 80px;
     overflow: auto;
+}
+
+.video-fit {
+    margin: 8px;
+    max-width: 380px;
+    max-height: 300px;
+    min-width: 250px;
+    min-height: 180px;
+    overflow: auto;
+    object-fit: contain;
+}
+
+.audio-fit {
+    margin: 8px;
 }
 
 .thread-content {

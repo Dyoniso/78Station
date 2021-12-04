@@ -11,11 +11,23 @@ div(class="reply-item" id="reply-"+reply.id data-id=(reply.id))
 
         div(class="fix-img")
             div(class="d-flex justify-content-center")
-                img(class="img-fit" src=`/files/${board}/${reply.fileInfo.name}`) 
+                - fileUrl = `/files/${board}/${reply.fileInfo.name}`
+                - type = reply.fileInfo.mime.split('/')[0]
+
+                if (type === 'video')
+                    video(controls="" class="video-fit")
+                        source(src=(fileUrl))
+
+                else if (type === 'audio')
+                    audio(controls="" class="audio-fit")
+                        source(src=(fileUrl))
+
+                else 
+                    img(class="img-fit" src=(fileUrl)) 
 
     
     if (!reply.fileInfo || reply.fileInfo === '')
         input(type="checkbox" class="del-value mr-1 mt-1" value=`${reply.id}` data-type="reply")
 
-    span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · R. #{reply.id}
+    span(class="color-secondary-dark") #{reply.self ? '(you)' : ''} !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · R. #{reply.id}
     pre(class="thread-content") !{reply.content}

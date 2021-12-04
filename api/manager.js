@@ -21,9 +21,7 @@ const smm = {
     SUCCESS : 'success'
 }
 
-const allowedFormats = {
-    IMAGE : ['jpeg','jpg','gif','bmp','png','webp']
-}
+const allowedFormats = ['jpeg','jpg','gif','bmp','png','m4v','avi','mpg','mp4','webm','webp','mp3', 'mpeg', 'ogg']
 
 app.all('*', middle.uidGen, async(req, res, next) => {
     return next()      
@@ -42,7 +40,7 @@ app.get('/', (req, res) => {
     }
 })()
 
-async function getThreadById(board, id) {
+async function getThreadById(board, id, uid) {
     if (!id || isNaN(id)) id = -1
 
     let thread = null
@@ -50,7 +48,7 @@ async function getThreadById(board, id) {
         try {
             let q = await db.query(`SELECT * FROM ${schema.BOARD}.${board} WHERE id = $1`, id)
             q = q[0]
-            if (q) thread = formatThread(q)
+            if (q) thread = formatThread(q, uid)
 
         } catch (err) {
             logger.error('Error after get thread by id: '+ id, err)
@@ -59,7 +57,7 @@ async function getThreadById(board, id) {
     return thread
 }
 
-async function getThreadReplies(board, thid, limit) {
+async function getThreadReplies(board, thid, uid, limit) {
     if (!limit || isNaN(limit)) limit = 25
     if (!thid || isNaN(thid)) thid = -1
 
@@ -67,7 +65,7 @@ async function getThreadReplies(board, thid, limit) {
     if (thid > 0) {
         try {
             let q = await db.query(`SELECT * FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 ORDER BY id DESC LIMIT $2`, [thid, limit])
-            if (q) for (r of q) replies.push(formatThreadReply(r))
+            if (q) for (r of q) replies.push(formatThreadReply(r, uid))
 
         } catch (err) {
             logger.error('Error after get thread replies from thid: '+ thid, err)
@@ -78,13 +76,13 @@ async function getThreadReplies(board, thid, limit) {
     return replies
 }
 
-async function getThreads(board, limit, offSet) {
+async function getThreads(board, limit, uid, offSet) {
     if (!offSet || isNaN(offSet) || offSet < 0) offSet = 0
 
     let threads = []
     try {
         let rst = await db.query(`SELECT * FROM ${schema.BOARD}.${board} ORDER BY updated ASC OFFSET $2 LIMIT $1`, [limit, offSet])
-        for (t of rst) threads.push(formatThread(t))
+        for (t of rst) threads.push(formatThread(t, uid))
 
     } catch (err) {
         logger.error('Error after get thread data', err)
@@ -94,10 +92,15 @@ async function getThreads(board, limit, offSet) {
     return threads
 }
 
-function formatThread(thread) {
+function formatThread(thread, uid) {
     if (thread.file_info && thread.file_info !== '') thread.file_info = JSON.parse(thread.file_info)
+
+    let op = false
+    if (uid && uid === thread.uid) op = true
+
     let thd = {
         id : thread.id,
+        op : op,
         title : thread.title,
         username : thread.username,
         content :  thread.content,
@@ -116,10 +119,15 @@ function formatThread(thread) {
     return thd
 }
 
-function formatThreadReply(reply) {
+function formatThreadReply(reply, uid) {
     if (reply.file_info && reply.file_info !== '') reply.file_info = JSON.parse(reply.file_info)
+
+    let self = false
+    if (uid && reply.uid === uid) self = true
+
     let rpy = {
         id : reply.id,
+        self : self,
         username : reply.username,
         content : reply.content,
         rawDate : reply.date,
@@ -203,7 +211,7 @@ io.of('thread').on('connection', async(socket) => {
     if (!(await checkBoardExists(board))) return throwMessage(smm.FATAL, `Selected board: ${board} not exists.`)
 
     async function updateReplyList(thid) {
-        let replies = await getThreadReplies(board, thid, 25)
+        let replies = await getThreadReplies(board, thid, uid, 25)
         let html = formatReplyToHtml(replies)
 
         for (s of io.of('/thread').sockets.values()) {
@@ -214,7 +222,7 @@ io.of('thread').on('connection', async(socket) => {
     }
 
     async function updateThreadList() {
-        let threads = await getThreads(board, 10)
+        let threads = await getThreads(board, 10, uid)
         let html = await formatThreadToHtml(threads)
 
         for (s of io.of('/thread').sockets.values()) {
@@ -238,13 +246,13 @@ io.of('thread').on('connection', async(socket) => {
     async function formatThreadToHtml(threads) {
         let html = ''
         for(t of threads) {
-            let replies = await getThreadReplies(board, t.id, 5)
+            let replies = await getThreadReplies(board, t.id, uid, 5)
             html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board, replies : replies })
         }
         return html
     }
 
-    let threads = await getThreads(board, 10)
+    let threads = await getThreads(board, 10, uid)
     let html = await formatThreadToHtml(threads)
     socket.emit('channel layer thread begin', html)
 
@@ -346,7 +354,7 @@ io.of('thread').on('connection', async(socket) => {
                 board : board,
             }))
             socket.insideThread = id
-            let replies = await getThreadReplies(board, id, 25)
+            let replies = await getThreadReplies(board, id, uid, 25)
 
             let html = ''
             for (r of replies) {
@@ -366,7 +374,7 @@ io.of('thread').on('connection', async(socket) => {
         let total = parseInt(obj.total)
         if (!total || total < 0 || isNaN(total)) total = -1
         if (total > 0) {
-            let threads = await getThreads(board, 10, total)
+            let threads = await getThreads(board, 10, uid, total)
             let html = ''
             for (t of threads) {
                 html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board })
@@ -401,7 +409,7 @@ io.of('thread').on('connection', async(socket) => {
         let dims = { width : 0, height : 0, }
 
         let allowed = false
-        for (f of allowedFormats.IMAGE) {
+        for (f of allowedFormats) {
             if (f === mime.split('/').pop()) {
                 allowed = true
                 break
@@ -452,7 +460,7 @@ io.of('thread').on('connection', async(socket) => {
         if (file !== null) {
             fileInfo = createFileInfo(file)
             if (fileInfo.error && fileInfo.error === 1) {
-                return throwMessage(smm.ERROR, 'Your image does not have a valid format! Format: '+fileInfo.type)
+                return throwMessage(smm.ERROR, 'Your file does not have a valid format! Format: '+fileInfo.type)
             }
 
             base64 = fileInfo.base64
@@ -482,20 +490,21 @@ io.of('thread').on('connection', async(socket) => {
                 let reply = formatThreadReply({
                     id : q.id,
                     thid : thid,
+                    uid : uid,
                     username : username,
                     content : content,
                     file_info : q.file_info,
                     date : q.date,
-                })
+                }, uid)
 
                 throwMessage(smm.SUCCESS, `Reply Updated! ID: ${reply.id} in Thread: ${thid}`)
 
-                let threads = await getThreads(board, 10)
+                let threads = await getThreads(board, 10, uid)
                 for (s of io.of('/thread').sockets.values()) {
                     if (s.insideThread === -1) {
                         let html = ''
                         for(t of threads) {
-                            let replies = await getThreadReplies(board, t.id, 5)
+                            let replies = await getThreadReplies(board, t.id, uid, 5)
                             html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board, replies : replies })
                         }
                         sock.emit('channel layer thread begin', html)
@@ -518,7 +527,7 @@ io.of('thread').on('connection', async(socket) => {
                     content : content,
                     file_info : q.file_info,
                     date : q.date,
-                })
+                }, uid)
 
                 throwMessage(smm.SUCCESS, 'Thread Updated! ID: '+thread.id)
 

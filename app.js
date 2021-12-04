@@ -25,10 +25,10 @@ app.use('/pub', express.static('public/js'))
 app.use('/pub', express.static('public/css'))
 app.use('/pub', express.static('public/assets'))
 
-app.use(express.json({ limit:'8mb' }))
+app.use(express.json({ limit:'12mb' }))
 
 const httpServer = http.createServer(app)
-const io = new Server(httpServer)
+const io = new Server(httpServer, { maxHttpBufferSize: 12e8 })
 
 httpServer.listen(PORT, HOSTNAME, () => {
     logger.ok(`Draweb API Started! Listening on port ${HOSTNAME}:${PORT}`)

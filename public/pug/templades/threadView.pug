@@ -1,5 +1,5 @@
 div(class="thread-view" id="threadItem-"+thread.id)
-    form(class='delTopic m-0' action='' method="" data-id=(thread.id))
+    form(class='delThread m-0' action='' method="" data-id=(thread.id))
         hr
         if (thread.fileInfo && thread.fileInfo !== '')
             - h = thread.fileInfo.dims ? thread.fileInfo.dims.height : 0
@@ -9,17 +9,29 @@ div(class="thread-view" id="threadItem-"+thread.id)
 
             div(class="d-flex")
                 input(type="checkbox" class="del-value mr-1 mt-1" value=`${thread.id}` data-type="thread")
-                div(class="thread-file-info" id="fileInfo") File: !{`<a class="item-hover" href="/files/${board}/${thread.fileInfo.name}">${thread.fileInfo.name}</a>`} (#{thread.fileInfo.size} #{w} x #{h}px) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`}
+                div(class="thread-file-info" id="fileInfo") File: !{`<a class="item-hover" href="/files/${board}/${thread.fileInfo.name}">${thread.fileInfo.name}</a>`} (#{thread.fileInfo.size}#{w <= 0 && h <= 0 ? '' : ` ${w} x ${h}px`}) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`}
                 
 
         div(class="wrap-content")
             if (thread.fileInfo && thread.fileInfo !== '')
                 div(class="fix-img")
                     div(class="d-flex justify-content-center")
-                        img(class="img-fit" src=`/files/${board}/${thread.fileInfo.name}`) 
+                        - fileUrl = `/files/${board}/${thread.fileInfo.name}`
+                        - type = thread.fileInfo.mime.split('/')[0]
+
+                        if (type === 'video')
+                            video(controls="" class="video-fit")
+                                source(src=(fileUrl))
+
+                        else if (type === 'audio')
+                            audio(controls="" loop="true" class="audio-fit")
+                                source(src=(fileUrl))
+
+                        else 
+                            img(class="img-fit" src=(fileUrl)) 
 
             div(class="thread-content")
-                small(class="color-secondary" data-id=(thread.id)) !{`<span class="quote font-weight-bold">${thread.title}</span>`} (OP) !{`<span class="iv-quote">${thread.username}</span>`} · #{thread.date} · No. #{thread.id}
+                small(class="color-secondary" data-id=(thread.id)) !{`<span class="quote font-weight-bold">${thread.title}</span>`} #{thread.op ? '(OP)' : ''} !{`<span class="iv-quote">${thread.username}</span>`} · #{thread.date} · No. #{thread.id}
                 pre !{thread.content}
 
         div(class="reply-container")

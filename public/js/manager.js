@@ -54,6 +54,7 @@ $(document).ready((e) => {
     }
 
     function emitSocketData(channel, obj) {
+        console.log(channel, obj)
         socket.emit(channel, obj)
     }
 
@@ -105,6 +106,7 @@ $(document).ready((e) => {
         el.scrollTop(el[0].scrollHeight)
     }
 
+    let messageTimeout = null
     function handleMessage(mode, message) {
         let error = false
 
@@ -126,11 +128,18 @@ $(document).ready((e) => {
 
             case smm.SUCCESS:
                 let el = $('#postMessage')
+                if (messageTimeout !== null) {
+                    clearTimeout(messageTimeout)
+                    el.hide()
+                }
+
                 el.text(message)
                 if (error === true) el.css({'color' : 'red'})
                 else el.css({'color' : 'green'})
                 if (!el.is(':visible')) el.slideToggle(100)
-                setTimeout(() => el.slideToggle(100), 5000)
+                if (error === false) {
+                    messageTimeout = setTimeout(() => el.slideToggle(100), 5000)
+                }
                 break
         }
     }
@@ -197,21 +206,37 @@ $(document).ready((e) => {
             updateListeners()
         })
         socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
-            $('#replyContent').html(obj)
-            updateListeners()
+            if (obj && obj !== '') {
+                $('#replyContent').html(obj)
+                updateListeners()
+            }
         })
         socket.off(ltLayerThread).on(ltLayerThread, (obj) => {
+            $('.error-container').remove()
+            $('.empty-board-container').remove()
+
             $('#layerContent').append(obj)
             scrollLock = false
             updateVisibility()
             updateListeners()
         })
         socket.off(ltThreadBegin).on(ltThreadBegin, (obj) => {
-            $('#layerContent').html(obj)
-            $('#postSubject').show()
-            hideDelBtn()
-            updateVisibility()
-            updateListeners()
+            if (obj && obj !== '') {
+                $('#layerContent').html(obj)
+                $('#postSubject').show()
+                hideDelBtn()
+                updateVisibility()
+                updateListeners()
+
+            } else {
+                $('#layerContent').html(`
+                    <div class="empty-board-container">
+                        <hr>
+                            <h4 class="text-center"> This board has no content. Be the first to post </h4>
+                        <hr>
+                    </div>
+                `)
+            }
         })
         socket.off(ltLayerScroll).on(ltLayerScroll, (obj) => {
             if (obj !== '') {
@@ -246,7 +271,7 @@ $(document).ready((e) => {
         for (r of storageItems) {
             try {
                 $("#"+r).find('.btnVisibility').html(`<img src="/pub/btn_show.png" class="mb-1 pointer-effect"/>`)
-                $("#"+r).children('.wrap-content').hide()
+                $("#"+r).find('.wrap-content').hide()
             } catch (err) {}
         } 
     }
@@ -260,13 +285,15 @@ $(document).ready((e) => {
             mode = PAGE_MODE_REPLY
             selectedThid = id
             socket.emit('channel thread connect', { thid : id })
+
+            $('#postMessage').text('').hide()
             hideDelBtn()
         })
 
         $('.btnVisibility').on('click', (e) => {
             let t = $(e.target)
-            let el = t.parents('.thread-item').children('.wrap-content')
-            let atrId = t.parents('.thread-item').attr('id')
+            let el = t.parents('.delThread').parent('.thread-item').find('.wrap-content')
+            let atrId = t.parents('.delThread').parent('.thread-item').attr('id')
 
             let storageItems = JSON.parse(localStorage.getItem(`hid-${boardPath}`))
             if (el.is(':visible')) {
@@ -353,6 +380,7 @@ $(document).ready((e) => {
             $('.error-container').remove()
             $('#settingsUsername').val(defaultName)
             $('#postInput').slideToggle(100)
+            $('#postMessage').text('').hide()
 
             $('#threadUsername').off('keypress').on('keypress', (e) => {
                 if (e.keyCode === 13) e.preventDefault()
@@ -490,6 +518,7 @@ $(document).ready((e) => {
             finalizeLatencyStatus()
             clearInput()
 
+            $('#postMessage').hide()
             $('#postInput').slideToggle(100)
 
             let els = $('.settings-box')
