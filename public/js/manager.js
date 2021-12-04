@@ -5,6 +5,7 @@ $(document).ready((e) => {
     let socket = null
     let boardPath = $('#boardPath').val()
     let defaultName = localStorage.defaultUsername
+    let defaultPassword = ''
     let selectedThid = -1
     let delObj = { threads : [], replies : [] }
 
@@ -30,13 +31,17 @@ $(document).ready((e) => {
 
         if (urlPath !== '') connectSocket(urlPath)
 
-        let password = localStorage.defaultPassword
-        if (!password || password.length <= 0) {
-            password = generateHash(8)
-            localStorage.defaultPassword = password
+        defaultPassword = localStorage.defaultPassword
+        if (!defaultPassword || defaultPassword.length <= 0) {
+            generatePassword()
         }
-        $('#settingsPassword').val(password)
+        $('#settingsPassword').val(defaultPassword)
     })()
+
+    function generatePassword() {
+        defaultPassword = generateHash(8)
+        localStorage.defaultPassword = defaultPassword
+    }
 
     function generateHash(length) {
         let result = '';
@@ -189,9 +194,11 @@ $(document).ready((e) => {
         })
         socket.off(ltReply).on(ltReply, (obj) => {
             $('#replyContent').append(obj)
+            updateListeners()
         })
         socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
             $('#replyContent').html(obj)
+            updateListeners()
         })
         socket.off(ltLayerThread).on(ltLayerThread, (obj) => {
             $('#layerContent').append(obj)
@@ -202,6 +209,7 @@ $(document).ready((e) => {
         socket.off(ltThreadBegin).on(ltThreadBegin, (obj) => {
             $('#layerContent').html(obj)
             $('#postSubject').show()
+            hideDelBtn()
             updateVisibility()
             updateListeners()
         })
@@ -252,6 +260,7 @@ $(document).ready((e) => {
             mode = PAGE_MODE_REPLY
             selectedThid = id
             socket.emit('channel thread connect', { thid : id })
+            hideDelBtn()
         })
 
         $('.btnVisibility').on('click', (e) => {
@@ -279,6 +288,8 @@ $(document).ready((e) => {
             let thid = parseInt(el.parents('.delTopic').data('id'))
             let type = el.data('type')
 
+            console.log(thid)
+
             if (type === PAGE_MODE_THREAD) {
                 if (el.prop('checked')) delObj.threads.push({ id : thid })
                 else delObj.threads = delObj.threads.filter((i) => i.id !== thid)
@@ -300,12 +311,19 @@ $(document).ready((e) => {
                 if (!elS.is(':visible')) elS.slideToggle(100)
 
             } else {
-                settingsLock = false
-                $('#delInfo').text('')
-                $('#btnDelete').hide()
-                if (elS.is(':visible')) elS.slideToggle(100)
+                hideDelBtn()
             }   
         })
+    }
+
+    function hideDelBtn() {
+        delObj = { threads : [], replies : [] }
+
+        let elS = $('.settings-box')
+        settingsLock = false
+        $('#delInfo').text('')
+        $('#btnDelete').hide()
+        if (elS.is(':visible')) elS.slideToggle(100)
     }
 
     let scrollLock = false
@@ -356,6 +374,7 @@ $(document).ready((e) => {
                             content : content,
                             title : title,
                             file : file,
+                            password : defaultPassword,
                         }
                         
                         if (obj.username <= 0) obj.username = 'Anon'
@@ -396,6 +415,7 @@ $(document).ready((e) => {
 
             $('#btnDelete').off('click').on('click', (e) => {
                 if (delObj.threads.length > 0 || delObj.replies.length > 0) {
+                    delObj.password = defaultPassword
                     emitSocketData('channel post delete', delObj)
                 }
             })
@@ -444,7 +464,16 @@ $(document).ready((e) => {
 
                         if (settingsLock === false) $('.settings-box').slideToggle(100)
                 }
-                localStorage.defaultPassword = $('#settingsPassword').val()
+
+                let password = $('#settingsPassword').val()
+                if (password.length > 0) {
+                    defaultPassword = password
+                    localStorage.defaultPassword = password
+
+                } else {
+                    generatePassword()
+                    $('#settingsPassword').val(defaultPassword)
+                }
             })
 
             setInterval(() => {
@@ -457,6 +486,7 @@ $(document).ready((e) => {
         if (isFinish === false) {
             isFinish = true
 
+            hideDelBtn()
             finalizeLatencyStatus()
             clearInput()
 

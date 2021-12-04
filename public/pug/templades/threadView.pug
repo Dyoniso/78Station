@@ -1,5 +1,5 @@
 div(class="thread-view" id="threadItem-"+thread.id)
-    form(class='delTopic m-0' action='' method="")
+    form(class='delTopic m-0' action='' method="" data-id=(thread.id))
         hr
         if (thread.fileInfo && thread.fileInfo !== '')
             - h = thread.fileInfo.dims ? thread.fileInfo.dims.height : 0

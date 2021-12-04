@@ -215,7 +215,7 @@ io.of('thread').on('connection', async(socket) => {
 
     async function updateThreadList() {
         let threads = await getThreads(board, 10)
-        let html = formatThreadToHtml(threads)
+        let html = await formatThreadToHtml(threads)
 
         for (s of io.of('/thread').sockets.values()) {
             if (s.insideThread === -1 && s.board === board) {
@@ -279,7 +279,7 @@ io.of('thread').on('connection', async(socket) => {
                 q = q[0]
 
                 if (q && q.file_info && q.file_info !== '') {
-                    let fileInfo = JSON.parse(q[0].file_info)
+                    let fileInfo = JSON.parse(q.file_info)
                     await fm.deleteFile(board, { name : fileInfo.name })
                 }
 
@@ -289,7 +289,7 @@ io.of('thread').on('connection', async(socket) => {
                     let rs = await db.query(`DELETE FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 RETURNING file_info,id`, [t.id])
                     for (r of rs) {
                         if (r.file_info && r.file_info !== '') {
-                            let fileInfo = JSON.parse(q[0].file_info)
+                            let fileInfo = JSON.parse(q.file_info)
                             await fm.deleteFile(board, { name : fileInfo.name })   
                         }
                         delCountReplies++
@@ -309,7 +309,7 @@ io.of('thread').on('connection', async(socket) => {
                 q = q[0]
 
                 if (q && q.file_info && q.file_info !== '') {
-                    fileInfo = JSON.parse(q[0].file_info)
+                    fileInfo = JSON.parse(q.file_info)
                     await fm.deleteFile(board, { name : fileInfo.name })
                 }
                 if (q && q.id && q.id > 0) {
@@ -323,7 +323,7 @@ io.of('thread').on('connection', async(socket) => {
             }
         }
 
-        if (delCountThreads <= 0 || delCountReplies <= 0) throwMessage(smm.ERROR, 'Wrong password. Check if you wrote correctly')
+        if (delCountThreads <= 0 && delCountReplies <= 0) throwMessage(smm.ERROR, 'Wrong password. Check if you wrote correctly')
         else {
             if (delCountThreads > 0) updateThreadList()
             else if (delCountReplies > 0) {
@@ -463,8 +463,8 @@ io.of('thread').on('connection', async(socket) => {
             let now = new Date().getTime()
             let q = []
                 
-            if (mode === POST_MODE_REPLY) q = await db.query(`INSERT INTO ${schema.THREAD_REPLY}.${board}(thid, uid, username,content,file_info,password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id,date,file_info`, [thid, uid, username, content, fileInfo, password])
-            else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(uid, title,username,content,file_info,password,updated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id,date,file_info`, [title, uid, username, content, fileInfo, password, now])
+            if (mode === POST_MODE_REPLY) q = await db.query(`INSERT INTO ${schema.THREAD_REPLY}.${board}(thid,uid,username,content,file_info,password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id,date,file_info`, [thid, uid, username, content, fileInfo, password])
+            else q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(uid,title,username,content,file_info,password,updated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id,date,file_info`, [uid, title, username, content, fileInfo, password, now])
             q = q[0]
 
             let ctn = content
@@ -513,7 +513,7 @@ io.of('thread').on('connection', async(socket) => {
 
                 let thread = formatThread({
                     id : q.id,
-                    title : '',
+                    title : title,
                     username : username,
                     content : content,
                     file_info : q.file_info,

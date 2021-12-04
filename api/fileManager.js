@@ -37,7 +37,7 @@ exports.registerFile = async(board, file) => {
 }
 
 exports.deleteFile = async(board, file) => {
-    let path = filesPath + '/' + board + '/' + file.name
+    let path = filesPath + board + '/' + file.name
     if (fs.existsSync(path)) {
         fs.unlinkSync(path)
         logger.ok(`File: ${file.name} successful deleted! `)
