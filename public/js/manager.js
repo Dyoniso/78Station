@@ -462,6 +462,9 @@ $(document).ready((e) => {
 
             $('#postInput').slideToggle(100)
 
+            let els = $('.settings-box')
+            if (els.is(':visible')) els.slideToggle(100)
+
             $('#threadContent').off('keypress')
             $('#threadUsername').off('keypress')
             $('.logo').off('click')
