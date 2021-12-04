@@ -164,20 +164,20 @@ $(document).ready((e) => {
             scrollLock = false
             initLatencyStatus()
             initApp()
-            callback()
+            if (callback) callback()
         })
         socket.off('connect_error').on('connect_error', err => {
-            callback(err)
+            if (callback) callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.off('connect_failed').on('connect_failed', err => {
-            callback(err)
+            if (callback) callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.on('disconnect', (err) => {
-            callback(err)
+            if (callback) callback(err)
             connected = false
         })
     }

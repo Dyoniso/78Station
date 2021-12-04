@@ -3,6 +3,7 @@ const Logger = require('./logger')
 const logger = new Logger('app')
 const fs = require('fs')
 const db = require('./database')
+const utils = require('./utils')
 
 const dirName = { 
     files : 'files',
@@ -10,6 +11,7 @@ const dirName = {
 
 exports.dirName = dirName
 const filesPath = './public/files/'
+exports.filesPath = filesPath
 
 exports.updateFileSystem = async(table) => {
     if (!fs.existsSync(filesPath)) fs.mkdirSync(filesPath)
@@ -31,8 +33,9 @@ exports.updateFileSystem = async(table) => {
 }
 
 exports.registerFile = async(board, file) => {
-    let path = filesPath + '/' + board + '/' + file.name
-    if (!fs.existsSync(path)) fs.writeFileSync(path, Buffer.from(file.base64, 'base64'))
+    let path = filesPath + board
+    let pathF = path + '/' + file.name
+    if (!fs.existsSync(pathF)) fs.writeFileSync(pathF, Buffer.from(file.base64, 'base64'))
     logger.ok(`File: ${file.name} successful registered in file system `)
 }
 

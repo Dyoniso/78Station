@@ -8,6 +8,7 @@ const fm = require('./fileManager')
 const utils = require('./utils')
 const sizeOf = require('image-size')
 const middle = require('./middle')
+const fs = require('fs')
 
 const tables = require('./sync').tables
 const schema = require('./sync').schema
@@ -32,13 +33,15 @@ app.get('/', (req, res) => {
 })
 
 ;(async() => {
+    logger.info('Starting Express route sync..')
+
     let boards = await db.query(`SELECT * FROM ${tables.BOARD}`)
     for (b of boards) {
         let path = '/' + b.path
         app.get(path, (req, res) => {
             return renderLayerView(req, res, b.path)
         })
-        logger.info(`Express route created! [Route: ${path}]`)
+        logger.info(`> Express route added! [Route: ${path}]`)
 
         let threads = await db.query(`SELECT id FROM ${schema.BOARD}.${b.path}`)
         for (t of threads) {
@@ -46,7 +49,7 @@ app.get('/', (req, res) => {
             app.get(path, (req, res) => {
                 return renderLayerView(req, res, b.path)
             })
-            logger.info(`Express route created! [Route: ${path}]`) 
+            logger.info(`> Express route added! [Route: ${path}]`) 
         }
     }
 })()
@@ -412,12 +415,24 @@ io.of('thread').on('connection', async(socket) => {
         }
     }
 
-    function createFileInfo(file) {
+    function createFileInfo(file, board) {
         let filename = file.name
         let mime = file.result.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0]
         let base64 = new Buffer.from(file.result.split(',')[1], 'base64')
         let size = base64.length
         let dims = { width : 0, height : 0, }
+
+        if (filename < 3) filename = utils.generateHash(12)
+        if (filename > 120) filename = filename.substr(0, 120)
+
+        try {
+            let path = fm.filesPath + board
+            if (fs.existsSync(path+'/'+filename)) filename = utils.generateHash(18) + '.' + mime.split('/').pop()
+            console.log(filename)
+
+        } catch (err) {
+            logger.error('Error in check if file exists')
+        }
 
         let allowed = false
         for (f of allowedFormats) {
@@ -469,7 +484,7 @@ io.of('thread').on('connection', async(socket) => {
         let fileInfo = ''
         let base64 = ''
         if (file !== null) {
-            fileInfo = createFileInfo(file)
+            fileInfo = createFileInfo(file, board)
             if (fileInfo.error && fileInfo.error === 1) {
                 return throwMessage(smm.ERROR, 'Your file does not have a valid format! Format: '+fileInfo.type)
             }
