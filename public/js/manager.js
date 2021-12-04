@@ -7,9 +7,11 @@ $(document).ready((e) => {
     let defaultName = localStorage.defaultUsername
     let defaultPassword = ''
     let selectedThid = -1
+    let settingsLock = false
     let delObj = { threads : [], replies : [] }
 
-    let urlPath = location.pathname.split('/').pop()
+    let urlBoardPath = location.pathname.split('/')[1]
+    let urlThreadPath = parseInt(location.pathname.split('/').pop())
 
     const PAGE_MODE_THREAD = 'thread'
     const PAGE_MODE_REPLY = 'reply'
@@ -29,7 +31,14 @@ $(document).ready((e) => {
             defaultName = defaultNameBegin
         }
 
-        if (urlPath !== '') connectSocket(urlPath)
+        if (urlBoardPath !== '') {
+            connectSocket(urlBoardPath, (err) => {
+                if (err) return
+                if (!isNaN(urlThreadPath) && urlThreadPath > 0) {
+                    setTimeout(() => connectThread(urlThreadPath), 500)
+                }
+            })
+        }
 
         defaultPassword = localStorage.defaultPassword
         if (!defaultPassword || defaultPassword.length <= 0) {
@@ -144,7 +153,7 @@ $(document).ready((e) => {
         }
     }
 
-    function connectSocket(board) {
+    function connectSocket(board, callback) {
         if (socket) socket.disconnect()
 
         socket = io('/thread', { query : { board : board } })
@@ -155,16 +164,20 @@ $(document).ready((e) => {
             scrollLock = false
             initLatencyStatus()
             initApp()
+            callback()
         })
         socket.off('connect_error').on('connect_error', err => {
+            callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.off('connect_failed').on('connect_failed', err => {
+            callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.on('disconnect', (err) => {
+            callback(err)
             connected = false
         })
     }
@@ -276,18 +289,20 @@ $(document).ready((e) => {
         } 
     }
 
-    let settingsLock = false
+    function connectThread(thid) {
+        mode = PAGE_MODE_REPLY
+        selectedThid = thid
+        $('#postMessage').text('').hide()
+        hideDelBtn()
+
+        emitSocketData('channel thread connect', { thid : thid })
+    }
 
     function updateListeners() {
         //Connect Thread
         $('.thread-header').off('click').on('click', (e) => {
-            let id = $(e.target).data('id')
-            mode = PAGE_MODE_REPLY
-            selectedThid = id
-            socket.emit('channel thread connect', { thid : id })
-
-            $('#postMessage').text('').hide()
-            hideDelBtn()
+            let id = parseInt($(e.target).data('id'))
+            if (!isNaN(id) && id > 0) connectThread(id)
         })
 
         $('.btnVisibility').on('click', (e) => {

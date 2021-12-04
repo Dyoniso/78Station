@@ -34,9 +34,20 @@ app.get('/', (req, res) => {
 ;(async() => {
     let boards = await db.query(`SELECT * FROM ${tables.BOARD}`)
     for (b of boards) {
-        app.get('/' + b.path, (req, res) => {
+        let path = '/' + b.path
+        app.get(path, (req, res) => {
             return renderLayerView(req, res, b.path)
         })
+        logger.info(`Express route created! [Route: ${path}]`)
+
+        let threads = await db.query(`SELECT id FROM ${schema.BOARD}.${b.path}`)
+        for (t of threads) {
+            let path = `/${b.path}/${t.id}`
+            app.get(path, (req, res) => {
+                return renderLayerView(req, res, b.path)
+            })
+            logger.info(`Express route created! [Route: ${path}]`) 
+        }
     }
 })()
 
