@@ -10,6 +10,7 @@ hr {
 }
 
 pre {
+    white-space: pre-wrap;
     color: var(--color-secondary);
     font-size: 16px;
     overflow: unset;

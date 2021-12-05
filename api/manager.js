@@ -1,3 +1,4 @@
+require('dotenv').config()
 const app = require('../app').app
 const io = require('../app').io
 const Logger = require('./logger')
@@ -213,9 +214,10 @@ function translateContent(content, option) {
 
 
 //Socket.io
-let threadReplyLimit = 200
-let threadInterval = 10
-let replyInterval = 3
+let pageSize = process.env.PAGE_SIZE | 20
+let threadReplyLimit = process.env.THREAD_REPLY_LIMIT
+let threadInterval = process.env.THREAD_INTERVAL
+let replyInterval = process.env.REPLY_INTERVAL
 let waitList = { THREAD : [], REPLY : [] }
 
 function checkWaitList(uid, mode) {
@@ -451,7 +453,7 @@ io.of('thread').on('connection', async(socket) => {
         let total = parseInt(obj.total)
         if (!total || total < 0 || isNaN(total)) total = -1
         if (total > 0) {
-            let threads = await getThreads(board, 10, uid, total)
+            let threads = await getThreads(board, pageSize, uid, total)
             let html = ''
             for (t of threads) {
                 html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board })
@@ -533,8 +535,8 @@ io.of('thread').on('connection', async(socket) => {
         let thid = -1
 
         if (checkWaitList(uid, mode) === true) {
-            let intervalTime = 10
-            if (mode === POST_MODE_REPLY) intervalTime = 3
+            let intervalTime = threadInterval
+            if (mode === POST_MODE_REPLY) intervalTime = replyInterval
             return throwMessage(smm.ERROR, `You must wait ${intervalTime} seconds to post again.`)
         }
 
@@ -550,6 +552,7 @@ io.of('thread').on('connection', async(socket) => {
         if (title.length > 190) title = title.substr(0, 190) + '...'
         if (content.length > 8000) return throwMessage(smm.ERROR, 'The content of your post must be less than 8000 characters.')
         
+        username = utils.htmlEnc(username)
         title = utils.htmlEnc(title)
         content = translateContent(utils.htmlEnc(content), { board : board, threadId : thid })
 

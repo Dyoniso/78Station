@@ -211,6 +211,9 @@ $(document).ready((e) => {
     }
 
     function connectSocket(board, callback) {
+        setUrl(`/${board}`)
+        setTitle(`/${board}/ Express - 78Station`)
+
         if (socket) socket.disconnect()
 
         socket = io('/thread', { query : { board : board } })
@@ -266,6 +269,7 @@ $(document).ready((e) => {
         $('.latency-status').text('')
     }
 
+    let notifyCount = 0
     function updateSocketListeners() {
         socket.off(ltThreadView).on(ltThreadView, (obj) => {
             $('#layerContent').html(obj)
@@ -278,6 +282,14 @@ $(document).ready((e) => {
         socket.off(ltReply).on(ltReply, (obj) => {
             $('#replyContent').append(obj)
             updateListeners()
+
+            if (mode === PAGE_MODE_REPLY) {
+                notifyCount++
+                if (notifyCount > 0) {
+                    $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
+                }
+            }
+
         })
         socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
             if (obj && obj !== '') {
@@ -354,6 +366,9 @@ $(document).ready((e) => {
     }
 
     function connectThread(thid) {
+        setUrl(`/${boardPath}/${thid}`)
+        setTitle(`/${boardPath}/${thid} - 78Station`)
+
         mode = PAGE_MODE_REPLY
         selectedThid = thid
 
@@ -454,6 +469,15 @@ $(document).ready((e) => {
         mode = PAGE_MODE_THREAD
     })
 
+    function setUrl(f) {
+        history.pushState('data', '', location.origin + f)
+    }
+
+    function setTitle(t) {
+        $('#pageTitle').text(t)
+        defaultTitle = t
+    }
+
     function initApp() {
         if (isFinish === true) {
             isFinish = false
@@ -495,14 +519,16 @@ $(document).ready((e) => {
                             obj.thid = selectedThid
                             postType = 'channel add thread reply'
                             delete obj.title
-
+                            
                             $('#subjectContainer').hide()
 
                         } else if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
 
                         emitSocketData(postType, obj) 
                         clearInput()
+
                         scrollLock = false
+                        filePreviewDisplay = false
                     }
         
                     if (file) {
@@ -542,6 +568,11 @@ $(document).ready((e) => {
 
             $('#dragFile').off('change').on('change', (e) => {
                 addFile(e.target.files[0])
+            })
+
+            $(document).off('mousemove').on('mousemove', (e) => {
+                $('#pageTitle').text(defaultTitle)
+                notifyCount = 0
             })
 
             $(document).off('keyup keydown').on('keyup keydown', (e) => {
