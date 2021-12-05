@@ -41,7 +41,7 @@ app.get('/', (req, res) => {
         app.get(path, (req, res) => {
             return renderLayerView(req, res, b.path)
         })
-        logger.info(`> Express route added! [Route: ${path}]`)
+        logger.info(`> Board Express route added! [Route: ${path}]`)
 
         let threads = await db.query(`SELECT id FROM ${schema.BOARD}.${b.path}`)
         for (t of threads) {
@@ -49,7 +49,7 @@ app.get('/', (req, res) => {
             app.get(path, (req, res) => {
                 return renderLayerView(req, res, b.path)
             })
-            logger.info(`> Express route added! [Route: ${path}]`) 
+            logger.info(`- Thread Express route added! [Route: ${path}]`) 
         }
     }
 })()
@@ -235,6 +235,15 @@ io.of('thread').on('connection', async(socket) => {
         }
     }
 
+    function removeRoute(name) {
+        let routes = app._router.stack
+        routes.forEach((r, i) => {
+            if (r.route) {
+                if (r.route.path === name) routes.splice(i, 1)
+            }
+        })
+    }
+
     async function updateThreadList() {
         let threads = await getThreads(board, 10, uid)
         let html = await formatThreadToHtml(threads)
@@ -277,7 +286,8 @@ io.of('thread').on('connection', async(socket) => {
         if (socket.latencyCount <= socket.latencyLimit) {
             let old = parseInt(obj.current)
             if (old < 0 || isNaN(old)) old = 0
-            latency = Date.now() - old   
+            latency = Date.now() - old
+            if (latency <= 0) latency = 0
         }
         socket.emit('channel latency', { latency : latency }) 
     })
@@ -308,6 +318,10 @@ io.of('thread').on('connection', async(socket) => {
                 if (q && q.id && q.id > 0) {
                     logger.ok(`* Thread Deleted! ID: ${t.id}`)
                     delCountThreads++
+
+                    let path = `/${board}/${q.id}`
+                    removeRoute(path)
+
                     let rs = await db.query(`DELETE FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 RETURNING file_info,id`, [t.id])
                     for (r of rs) {
                         if (r.file_info && r.file_info !== '') {
@@ -556,6 +570,11 @@ io.of('thread').on('connection', async(socket) => {
                 }, uid)
 
                 throwMessage(smm.SUCCESS, 'Thread Updated! ID: '+thread.id)
+
+                let path = `/${board}/${thread.id}`
+                app.get(path, (req, res) => {
+                    return renderLayerView(req, res, path)
+                })
 
                 for (s of io.of('/thread').sockets.values()) {
                     if (s.insideThread === -1) {

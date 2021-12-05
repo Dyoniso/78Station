@@ -100,6 +100,10 @@ $(document).ready((e) => {
         reader.id = 1
         reader.filename = file.name
         reader.readAsDataURL(file)
+
+        const dT = new DataTransfer();
+        dT.items.add(file)
+        $('#dragFile')[0].files = dT.files
     }
 
     function clearInput() {
@@ -213,6 +217,7 @@ $(document).ready((e) => {
         socket.off(ltThreadView).on(ltThreadView, (obj) => {
             $('#layerContent').html(obj)
             $('#postSubject').hide()
+            updateListeners()
         })
         socket.off(ltReply).on(ltReply, (obj) => {
             $('#replyContent').append(obj)
@@ -227,8 +232,8 @@ $(document).ready((e) => {
         socket.off(ltLayerThread).on(ltLayerThread, (obj) => {
             $('.error-container').remove()
             $('.empty-board-container').remove()
-
             $('#layerContent').append(obj)
+            
             scrollLock = false
             updateVisibility()
             updateListeners()
@@ -237,6 +242,7 @@ $(document).ready((e) => {
             if (obj && obj !== '') {
                 $('#layerContent').html(obj)
                 $('#postSubject').show()
+
                 hideDelBtn()
                 updateVisibility()
                 updateListeners()
@@ -282,6 +288,8 @@ $(document).ready((e) => {
         }
         
         for (r of storageItems) {
+            console.log(r)
+
             try {
                 $("#"+r).find('.btnVisibility').html(`<img src="/pub/btn_show.png" class="mb-1 pointer-effect"/>`)
                 $("#"+r).find('.wrap-content').hide()
@@ -325,12 +333,10 @@ $(document).ready((e) => {
             localStorage.setItem(`hid-${boardPath}`, JSON.stringify(storageItems))
         })
 
-        $('.delTopic').find('input[type=checkbox]').off('change').on('change', (e) => {
+        $('.delThread').find('input[type=checkbox]').off('change').on('change', (e) => {
             let el = $(e.target)
-            let thid = parseInt(el.parents('.delTopic').data('id'))
+            let thid = parseInt(el.parents('.delThread').data('id'))
             let type = el.data('type')
-
-            console.log(thid)
 
             if (type === PAGE_MODE_THREAD) {
                 if (el.prop('checked')) delObj.threads.push({ id : thid })
