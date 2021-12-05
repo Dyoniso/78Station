@@ -63,7 +63,6 @@ $(document).ready((e) => {
     }
 
     function emitSocketData(channel, obj) {
-        console.log(channel, obj)
         socket.emit(channel, obj)
     }
 
@@ -243,6 +242,8 @@ $(document).ready((e) => {
                 $('#layerContent').html(obj)
                 $('#postSubject').show()
 
+                console.log(obj)
+
                 hideDelBtn()
                 updateVisibility()
                 updateListeners()
@@ -288,8 +289,6 @@ $(document).ready((e) => {
         }
         
         for (r of storageItems) {
-            console.log(r)
-
             try {
                 $("#"+r).find('.btnVisibility').html(`<img src="/pub/btn_show.png" class="mb-1 pointer-effect"/>`)
                 $("#"+r).find('.wrap-content').hide()

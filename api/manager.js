@@ -223,6 +223,14 @@ io.of('thread').on('connection', async(socket) => {
     socket.board = board
 
     if (!(await checkBoardExists(board))) return throwMessage(smm.FATAL, `Selected board: ${board} not exists.`)
+    
+    async function clearOnlyThread(thid) {
+        for (s of io.of('/thread').sockets.values()) {
+            if (s.insideThread === thid && s.board === board) {
+                s.emit('channel layer thread begin', '<h4 class="p-2"> Thread Deleted! </h4>')
+            }
+        }  
+    }
 
     async function updateReplyList(thid) {
         let replies = await getThreadReplies(board, thid, uid, 25)
@@ -322,6 +330,8 @@ io.of('thread').on('connection', async(socket) => {
                     let path = `/${board}/${q.id}`
                     removeRoute(path)
 
+                    if (!threadUpdate.includes(q.id)) threadUpdate.push(q.id)
+
                     let rs = await db.query(`DELETE FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 RETURNING file_info,id`, [t.id])
                     for (r of rs) {
                         if (r.file_info && r.file_info !== '') {
@@ -361,7 +371,12 @@ io.of('thread').on('connection', async(socket) => {
 
         if (delCountThreads <= 0 && delCountReplies <= 0) throwMessage(smm.ERROR, 'Wrong password. Check if you wrote correctly')
         else {
-            if (delCountThreads > 0) updateThreadList()
+            if (delCountThreads > 0) {
+                updateThreadList() 
+                for (t of threadUpdate) {
+                    clearOnlyThread(t)
+                }
+            }
             else if (delCountReplies > 0) {
                 updateThreadList()
                 for (t of threadUpdate) updateReplyList(t)
