@@ -6,7 +6,7 @@ div(class="thread-item" id="threadItem-"+thread.id)
             - w = thread.fileInfo.dims ? thread.fileInfo.dims.width : 0
 
             - originUrl = `https://78Station.org/files/${board}/${thread.fileInfo.name}`
-            div(class="thread-file-info" id="fileInfo") !{`<span class="btnVisibility"><img src="/pub/btn_hide.png" class="mb-1 pointer-effect"/></span>`} File: !{`<a class="item-hover" href="/files/${board}/${thread.fileInfo.name}">${thread.fileInfo.name}</a>`} (#{thread.fileInfo.size}#{w <= 0 && h <= 0 ? '' : ` ${w} x ${h}px`}) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`} !{'<small class="font-weight-bold" style="color:green">(CHAT OPEN)</small>'}
+            div(class="thread-file-info" id="fileInfo") !{`<span class="btnVisibility"><img src="/pub/btn_hide.png" class="mb-1 pointer-effect"/></span>`} File: !{`<a class="item-hover" href="/files/${board}/${thread.fileInfo.name}">${thread.fileInfo.name}</a>`} (#{thread.fileInfo.size}#{w <= 0 && h <= 0 ? '' : ` ${w} x ${h}px`}) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`} !{`<small class="font-weight-bold" style="color:${thread.lock ? 'red' : 'green'}">${thread.lock ? '(CHAT CLOSE)' : '(CHAT OPEN)'}</small>`}
 
         div(class="wrap-content")
             if (thread.fileInfo && thread.fileInfo !== '')
@@ -24,11 +24,11 @@ div(class="thread-item" id="threadItem-"+thread.id)
                                 source(src=(fileUrl))
 
                         else 
-                            img(class="img-fit" src=(fileUrl)) 
+                            img(onClick=('openModal(this)') class="img-fit" src=(fileUrl) data-href=(fileUrl) data-date=(thread.date) data-filename=(thread.fileInfo.name) data-size=(thread.fileInfo.size) date-width=(thread.fileInfo.width) data-height=(thread.fileInfo.height) data-id=(thread.id)) 
 
             div(class="thread-content")
                 input(type="checkbox" class="del-value mr-1 mt-1" value=`${thread.id}` data-type="thread")
-                small(class="thread-header" data-id=(thread.id)) !{`<span class="quote font-weight-bold">${thread.title}</span>`} #{thread.op ? '(OP)' : ''} !{`<span class="iv-quote">${thread.username}</span>`} · #{thread.date} · No. #{thread.id}
+                small(class="thread-header" data-id=(thread.id)) !{`<span class="quote font-weight-bold">${thread.title}</span>`} #{thread.op ? '(OP)' : ''} !{`<span class="font-weight-bold">${thread.username}</span>`} · #{thread.date} · No. #{thread.id}
                 pre !{thread.content}
 
             if (replies)

@@ -4,20 +4,30 @@ html
     link(type="text/css" rel="stylesheet" href="/pub/pulse.css")
     
     body(class="dark-theme")
+        include ./templades/imgPreview.pug
+
         div(class="container-fluid")
             div(class="d-flex align-items-stretch")
                 nav(class="nav-bar")
                     h5(class="logo") 78Express Boards
                     hr
                     each b in boards
-                        div(class="board-item d-flex align-items-center" id="boardItem-"+b.path)
+                        div(class="board-item d-flex align-items-center boardItem-"+b.path)
                             div(class="pulse")
                             div(class="latency-status")
                             div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ - #{b.name}
 
                 main(class="layer-container")
                     input(type="hidden" id="boardPath" value=(path))
-                    div(class="file-preview" id="filePreview")
+
+                    div(class="flat-board-preview")
+                        div(class="font-weight-bold") 78Express  
+
+                        each b in boards
+                            div(class="board-item d-flex align-items-center boardItem-"+b.path)
+                                div(class="pulse")
+                                div(class="latency-status")
+                                div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ - #{b.name}
 
                     div(class="layer-content" id="layerContent")
                         div(class="p-3 text-center")
@@ -42,7 +52,10 @@ html
                                 label(class="thread-file" for="dragFile")
                                     div(class="drag-btn")
 
-                                input(type="text" id="postSubject" placeholder="Thread Subject" class="form-control" style="width:20%")
+                                div(id="subjectContainer" style="width:30%")
+                                    input(type="text" id="postSubject" placeholder="Thread Subject" class="form-control")
+                                    div(class="file-preview" id="filePreview")
+
                                 input(type="file" id="dragFile" class="chat-file" style="display:none")        
                                 textarea(type="text" placeholder="Type anything.." class="form-control" id="threadContent")
 

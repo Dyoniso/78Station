@@ -95,14 +95,14 @@ async function getThreads(board, limit, uid, offSet) {
 
     let threads = []
     try {
-        let rst = await db.query(`SELECT * FROM ${schema.BOARD}.${board} ORDER BY updated ASC OFFSET $2 LIMIT $1`, [limit, offSet])
+        let rst = await db.query(`SELECT * FROM ${schema.BOARD}.${board} ORDER BY updated DESC OFFSET $2 LIMIT $1`, [limit, offSet])
         for (t of rst) threads.push(formatThread(t, uid))
 
     } catch (err) {
         logger.error('Error after get thread data', err)
     }
 
-    threads.sort((x, y) => x.updated - y.updated)
+    threads.sort((x, y) =>  x.updated - y.updated)
     return threads
 }
 
@@ -117,8 +117,10 @@ function formatThread(thread, uid) {
         op : op,
         title : thread.title,
         username : thread.username,
+        updated : thread.updated,
         content :  thread.content,
         rawDate : thread.date,
+        lock : thread.lock,
         date : utils.formatTimestamp(thread.date),
     }
     if (thread.file_info && thread.file_info) {
@@ -211,6 +213,33 @@ function translateContent(content, option) {
 
 
 //Socket.io
+let threadReplyLimit = 200
+let threadInterval = 10
+let replyInterval = 3
+let waitList = { THREAD : [], REPLY : [] }
+
+function checkWaitList(uid, mode) {
+    if (mode === POST_MODE_THREAD) {
+        if (!waitList.THREAD.includes(uid)) {
+            waitList.THREAD.push(uid)
+            setTimeout(() => {
+                waitList.THREAD = waitList.THREAD.filter((i) => i !== uid)
+            }, threadInterval * 1000)
+            return false
+        }
+        return true
+    } else {
+        if (!waitList.REPLY.includes(uid)) {
+            waitList.REPLY.push(uid)
+            setTimeout(() => {
+                waitList.REPLY = waitList.REPLY.filter((i) => i !== uid)
+            }, replyInterval * 1000)
+            return false
+        }
+        return true
+    }
+}
+
 io.of('thread').use((socket, next) => {
     return middle.uidGenSocket(socket, next)
 })
@@ -227,7 +256,10 @@ io.of('thread').on('connection', async(socket) => {
     async function clearOnlyThread(thid) {
         for (s of io.of('/thread').sockets.values()) {
             if (s.insideThread === thid && s.board === board) {
-                s.emit('channel layer thread begin', '<h4 class="p-2"> Thread Deleted! </h4>')
+                s.emit('channel layer thread begin', `
+                    <h4 class="p-2"> Thread Deleted! <br> Redirecting.. </h4>
+                    <script>location.href = '/';</script>
+                `)
             }
         }  
     }
@@ -307,6 +339,8 @@ io.of('thread').on('connection', async(socket) => {
 
         if (Array.isArray(threads) === false) return throwMessage('Invalid thread request')
         if (Array.isArray(replies) === false) return throwMessage('Invalid reply request')
+
+        if (replies.length > 0) throwMessage(smm.ERROR, 'This function is currently disabled.')
 
         let delCountThreads = 0
         let delCountReplies = 0
@@ -498,6 +532,12 @@ io.of('thread').on('connection', async(socket) => {
         let file = obj.file
         let thid = -1
 
+        if (checkWaitList(uid, mode) === true) {
+            let intervalTime = 10
+            if (mode === POST_MODE_REPLY) intervalTime = 3
+            return throwMessage(smm.ERROR, `You must wait ${intervalTime} seconds to post again.`)
+        }
+
         if (username <= 0) username = 'Anon'
         if (!password || password.length <= 0) password = utils.generateHash(14)
         if (mode === POST_MODE_REPLY) {
@@ -507,7 +547,10 @@ io.of('thread').on('connection', async(socket) => {
         else if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
         if (content.length <= 3) return throwMessage(smm.ERROR, 'Invalid thread. Write content longer than 3 characters')
         if (!title || title.length === 0) title = ''
+        if (title.length > 190) title = title.substr(0, 190) + '...'
+        if (content.length > 8000) return throwMessage(smm.ERROR, 'The content of your post must be less than 8000 characters.')
         
+        title = utils.htmlEnc(title)
         content = translateContent(utils.htmlEnc(content), { board : board, threadId : thid })
 
         let fileInfo = ''
@@ -521,6 +564,19 @@ io.of('thread').on('connection', async(socket) => {
             base64 = fileInfo.base64
             delete fileInfo.base64
         }
+
+        let lock = false
+        if (mode === POST_MODE_REPLY) {
+            try {
+                let q = await db.query(`SELECT lock FROM ${schema.BOARD}.${board} WHERE id = $1`, [thid])
+                if (q[0] && q[0].lock) lock = Boolean(q[0].lock)
+
+            } catch (err) {
+                logger.error('Error after check if thread is lock', err)
+            }
+        }
+
+        if (lock === true) return throwMessage(smm.ERROR, 'This thread is no longer available for replies.')
 
         try {
             let now = new Date().getTime()
@@ -552,6 +608,20 @@ io.of('thread').on('connection', async(socket) => {
                     date : q.date,
                 }, uid)
 
+                try {
+                    let limit = threadReplyLimit
+                    let reply_len = 0
+                    let q = await db.query(`SELECT count(*) FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1`, [thid])
+
+                    reply_len = parseInt(q[0].count)
+                    if (isNaN(reply_len) || !reply_len) reply_len = 0
+                    if (reply_len >= limit) await db.query(`UPDATE ${schema.BOARD}.${board} SET lock = true WHERE id = $1`, [thid])
+
+
+                } catch (err) {
+                    logger.error('Error after count replies', err)
+                }
+
                 throwMessage(smm.SUCCESS, `Reply Updated! ID: ${reply.id} in Thread: ${thid}`)
 
                 let threads = await getThreads(board, 10, uid)
@@ -562,7 +632,7 @@ io.of('thread').on('connection', async(socket) => {
                             let replies = await getThreadReplies(board, t.id, uid, 5)
                             html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board, replies : replies })
                         }
-                        sock.emit('channel layer thread begin', html)
+                        s.emit('channel layer thread begin', html)
 
                     } else if (s.insideThread === thid) {
                         s.emit('channel layer reply', pug.renderFile('./public/pug/templades/itemReply.pug', { 
@@ -578,6 +648,7 @@ io.of('thread').on('connection', async(socket) => {
                 let thread = formatThread({
                     id : q.id,
                     title : title,
+                    lock : false,
                     username : username,
                     content : content,
                     file_info : q.file_info,

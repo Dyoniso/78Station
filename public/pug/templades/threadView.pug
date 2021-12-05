@@ -28,10 +28,10 @@ div(class="thread-view" id="threadItem-"+thread.id)
                                 source(src=(fileUrl))
 
                         else 
-                            img(class="img-fit" src=(fileUrl)) 
+                            img(onClick=('openModal(this)') class="img-fit" src=(fileUrl) data-href=(fileUrl) data-date=(thread.date) data-filename=(thread.fileInfo.name) data-size=(thread.fileInfo.size) date-width=(thread.fileInfo.width) data-height=(thread.fileInfo.height) data-id=(thread.id)) 
 
             div(class="thread-content")
-                small(class="color-secondary" data-id=(thread.id)) !{`<span class="quote font-weight-bold">${thread.title}</span>`} #{thread.op ? '(OP)' : ''} !{`<span class="iv-quote">${thread.username}</span>`} · #{thread.date} · No. #{thread.id}
+                small(class="color-secondary" data-id=(thread.id)) !{`<span class="quote font-weight-bold">${thread.title}</span>`} #{thread.op ? '(OP)' : ''} !{`<span class="font-weight-bold">${thread.username}</span>`} · #{thread.date} · No. #{thread.id}
                 pre !{thread.content}
 
         div(class="reply-container")

@@ -72,6 +72,7 @@ async function checkTableExists(table) {
                         file_info text DEFAULT(''),
                         updated varchar(200) DEFAULT(''),
                         password varchar(200) DEFAULT(''),
+                        lock boolean DEFAULT false,
                         date timestamp DEFAULT current_timestamp
                     );
                 `)

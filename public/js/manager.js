@@ -1,3 +1,26 @@
+function openModal(e) {
+    e = $(e)
+
+    let filename = e.data('filename')
+    let id = e.data('id')
+    let size = e.data('size')
+    let width = e.data('width')
+    let heigth = e.data('height')
+    let date = e.data('date')
+    let href = e.data('href')
+
+    $('#btnDownloadImgPreview').attr('href', href)
+    $('#modalPreviewTitle').html(`
+        ${id} - <a href="${href}" class="file-name text-warning">${filename}</a> (${size} ${width}x${heigth}px) - ${date}
+    `)
+    href = location.origin + href
+    $('#searchUrl').html(`
+        Search: <a target="_blank" class="text-warning" href="//www.google.com/searchbyimage?image_url=${href}">Google</a> / <a target="_blank" class="text-warning" href="//iqdb.org/?url=${href}">IQDB</a> / <a target="_blank" class="text-warning" href="//saucenao.com/search.php?url=${href}">SauceNao</a>
+    `)
+    $('#modalImgPreview').attr('src', e.attr('src'))
+    $('#imgViewModal').modal('show')
+}
+
 $(document).ready((e) => {
     let shiftKey = false
     let isFinish = true
@@ -9,6 +32,7 @@ $(document).ready((e) => {
     let selectedThid = -1
     let settingsLock = false
     let delObj = { threads : [], replies : [] }
+    let filePreviewDisplay = false
 
     let urlBoardPath = location.pathname.split('/')[1]
     let urlThreadPath = parseInt(location.pathname.split('/').pop())
@@ -47,6 +71,10 @@ $(document).ready((e) => {
         $('#settingsPassword').val(defaultPassword)
     })()
 
+    $('#btnCloseImgPreviewModal').on('click', (e) => {
+        $('#imgViewModal').modal('hide')
+    })
+
     function generatePassword() {
         defaultPassword = generateHash(8)
         localStorage.defaultPassword = defaultPassword
@@ -63,7 +91,7 @@ $(document).ready((e) => {
     }
 
     function emitSocketData(channel, obj) {
-        socket.emit(channel, obj)
+        if (socket) socket.emit(channel, obj)
     }
 
     function updateFilePreview(file) {
@@ -76,10 +104,32 @@ $(document).ready((e) => {
         if (type === 'audio') fileFrame = `<audio id="audioItem-${file.id}" controls="" loop=""><source src="${file.base64}" /></audio>`
 
         $('#filePreview').hide().html(`
-            ${fileFrame}
-            <small class="file-info">${name} / ${file.size}</small>
+            <div class="file-content">
+                ${fileFrame}
+                <small class="file-info">${name} / ${file.size}</small>
+                <div class="btn-file-remove" id="btnRemoveFile">
+                    <img src="/pub/btn_hide.png" />
+                </div>
+            </div>
         `).fadeIn(200)
 
+        filePreviewDisplay = true
+        
+        if (mode === PAGE_MODE_REPLY) {
+            $('#subjectContainer').show()
+        }
+
+        $('#btnRemoveFile').off('click').on('click', (e) => {
+            $('#filePreview').html('')
+            $('#dragFile').val('')
+            $('#threadContent').css('height', '40px')
+
+            filePreviewDisplay = false
+
+            if (mode === PAGE_MODE_REPLY) {
+                $('#subjectContainer').hide()
+            }
+        })
     }
 
     function addFile(file) {
@@ -103,12 +153,16 @@ $(document).ready((e) => {
         const dT = new DataTransfer();
         dT.items.add(file)
         $('#dragFile')[0].files = dT.files
+
+        $('#threadContent').css('height', 'auto')
     }
 
     function clearInput() {
+        $('#postSubject').val('')
         $('#threadContent').val('')
         $('#threadUsername').val('')
         $('#dragFile').val('')
+        $('#threadContent').removeAttr('style')
         $('#filePreview').empty()
     }
 
@@ -198,7 +252,7 @@ $(document).ready((e) => {
     function initLatencyStatus() {
         if (pingInterval !== null) finalizeLatencyStatus()
 
-        let el = $('#boardItem-'+boardPath)
+        let el = $('.boardItem-'+boardPath)
         el.children('.pulse').css({ background : '#4bd6a3' })
 
         pingInterval = setInterval(() => {
@@ -215,7 +269,10 @@ $(document).ready((e) => {
     function updateSocketListeners() {
         socket.off(ltThreadView).on(ltThreadView, (obj) => {
             $('#layerContent').html(obj)
+
+            if (filePreviewDisplay === false) $('#subjectContainer').hide()
             $('#postSubject').hide()
+
             updateListeners()
         })
         socket.off(ltReply).on(ltReply, (obj) => {
@@ -240,9 +297,9 @@ $(document).ready((e) => {
         socket.off(ltThreadBegin).on(ltThreadBegin, (obj) => {
             if (obj && obj !== '') {
                 $('#layerContent').html(obj)
-                $('#postSubject').show()
 
-                console.log(obj)
+                $('#subjectContainer').show()
+                $('#postSubject').show()
 
                 hideDelBtn()
                 updateVisibility()
@@ -270,7 +327,7 @@ $(document).ready((e) => {
         })
         socket.off(ltLatency).on(ltLatency, (obj) => {
             let latency = obj.latency
-            let el = $('#boardItem-'+boardPath)
+            let el = $('.boardItem-'+boardPath)
 
             let color = '#4dd64b'
             if (latency > 300) color = '#fcdb38'
@@ -299,6 +356,7 @@ $(document).ready((e) => {
     function connectThread(thid) {
         mode = PAGE_MODE_REPLY
         selectedThid = thid
+
         $('#postMessage').text('').hide()
         hideDelBtn()
 
@@ -353,8 +411,11 @@ $(document).ready((e) => {
                 $('#btnDelete').show()
                 $('#delInfo').html(`
                     Thread (${delObj.threads.length})
-                    Reply (${delObj.replies.length})
                 `)
+                /*$('#delInfo').html(`
+                    Thread (${delObj.threads.length})
+                    Reply (${delObj.replies.length})
+                `)*/
                 if (!elS.is(':visible')) elS.slideToggle(100)
 
             } else {
@@ -405,8 +466,10 @@ $(document).ready((e) => {
             $('#threadUsername').off('keypress').on('keypress', (e) => {
                 if (e.keyCode === 13) e.preventDefault()
             })
-            $('#threadContent').off('keypress').on('keypress', (e) => {
-                if (shiftKey === false && e.keyCode === 13) {
+            $('#threadContent').off('keydown').on('keydown', (e) => {
+                let key = e.keyCode || e.charCode
+
+                if (shiftKey === false && key === 13) {
                     e.preventDefault()
         
                     let file = $('#dragFile').prop('files')[0]
@@ -433,6 +496,8 @@ $(document).ready((e) => {
                             postType = 'channel add thread reply'
                             delete obj.title
 
+                            $('#subjectContainer').hide()
+
                         } else if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
 
                         emitSocketData(postType, obj) 
@@ -450,6 +515,7 @@ $(document).ready((e) => {
                         sendPostData(null)
                     }
                 }
+
             }).on('input', (e) => {
                 let el = $(e.target)
                 el.css('height', '5px')
@@ -500,27 +566,30 @@ $(document).ready((e) => {
 
             }).off('click').on('click', (e) => {
                 let el = $(e.target)
-                if (el.attr('id') !== 'settingsUsername'
-                    && el.attr('id') !== 'settingsBtn' 
-                    && el.attr('id') !== 'settingsPassword' 
-                    && !(el.attr('class').includes('del-value'))
-                    && $('.settings-box').is(':visible')) {
-                        let username = $('#settingsUsername').val()
-                        if (!username || username === '') username = 'Anon'
-                        localStorage.defaultUsername = username
-                        defaultName = username
 
-                        if (settingsLock === false) $('.settings-box').slideToggle(100)
-                }
+                if (el) {
+                    if (el.attr('id') !== 'settingsUsername'
+                        && el.attr('id') !== 'settingsBtn' 
+                        && el.attr('id') !== 'settingsPassword' 
+                        && !(el.attr('class') && el.attr('class').includes('del-value'))
+                        && $('.settings-box').is(':visible')) {
+                            let username = $('#settingsUsername').val()
+                            if (!username || username === '') username = 'Anon'
+                            localStorage.defaultUsername = username
+                            defaultName = username
 
-                let password = $('#settingsPassword').val()
-                if (password.length > 0) {
-                    defaultPassword = password
-                    localStorage.defaultPassword = password
+                            if (settingsLock === false) $('.settings-box').slideToggle(100)
+                    }
 
-                } else {
-                    generatePassword()
-                    $('#settingsPassword').val(defaultPassword)
+                    let password = $('#settingsPassword').val()
+                    if (password.length > 0) {
+                        defaultPassword = password
+                        localStorage.defaultPassword = password
+
+                    } else {
+                        generatePassword()
+                        $('#settingsPassword').val(defaultPassword)
+                    }
                 }
             })
 

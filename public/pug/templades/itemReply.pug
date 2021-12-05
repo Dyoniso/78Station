@@ -1,4 +1,4 @@
-div(class="reply-item" id="reply-"+reply.id data-id=(reply.id))
+div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}` id="reply-"+reply.id data-id=(reply.id))
     if (reply.fileInfo && reply.fileInfo !== '')
         - h = reply.fileInfo.dims ? reply.fileInfo.dims.height : 0
         - w = reply.fileInfo.dims ? reply.fileInfo.dims.width : 0
@@ -23,11 +23,11 @@ div(class="reply-item" id="reply-"+reply.id data-id=(reply.id))
                         source(src=(fileUrl))
 
                 else 
-                    img(class="img-fit" src=(fileUrl)) 
+                    img(onClick=('openModal(this)') class="img-fit" src=(fileUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-size=(reply.fileInfo.size) date-width=(reply.fileInfo.width) data-height=(reply.fileInfo.height) data-id=(reply.id)) 
 
     
-    if (!reply.fileInfo || reply.fileInfo === '')
+    //-if (!reply.fileInfo || reply.fileInfo === '')
         input(type="checkbox" class="del-value mr-1 mt-1" value=`${reply.id}` data-type="reply")
 
-    span(class="color-secondary-dark") #{reply.self ? '(you)' : ''} !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · R. #{reply.id}
+    span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · R. #{reply.id}
     pre(class="thread-content") !{reply.content}
