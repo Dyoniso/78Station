@@ -9,7 +9,7 @@ const app = express()
 const PORT = process.env.PORT || process.env.SERVER_PORT
 const HOSTNAME = process.env.HOSTNAME
 
-const DEFAULT_BOARDS = [ { name : 'random', path : 'b' }, { name : 'anime', path : 'a' } ]
+const DEFAULT_BOARDS = [ { name : 'International', path : 'int' }, { name : 'Random', path : 'b' } ]
 exports.DEFAULT_BOARDS = DEFAULT_BOARDS
 
 const Logger = require('./api/logger')

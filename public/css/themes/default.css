@@ -1,21 +1,21 @@
 :root {
-    --color-primary : #fff;
-    --color-secondary : #d1d1d1;
-    --color-secondary-dark: #a1a1a1;
+    --color-primary : #b1b1b1;
+    --color-secondary : #b6b5b5;
+    --color-secondary-dark: #838383;
     --color-secondary-hover: #a8a7a7;
     --color-secondary-dark-hover: #cfcece;
     --color-accent: #dc3545;
     --color-accent-success: #28a745;
-    --bgr-primary : #1b0b2c;
-    --bgr-secondary : #40186b;
-    --bgr-secondary-dark : #291044;
-    --bgr-secondary-light: #5a2395;
+    --bgr-primary : #0b0411;
+    --bgr-secondary : #120024;
+    --bgr-secondary-dark : #12071f;
+    --bgr-secondary-light: #1F0034;
     --quote-board : #117a8b;
     --quote-thread : #ffc107;
     --quote-reply : #fd0612;
     --quote : #789922;
     --iv-quote : #dc3545;
     --color-srollbar : #6b6e705e;
-    --bgr-reply-box : #0f144d;
-    --bgr-reply-box-2 : #4d0f29;
+    --bgr-reply-box : #74057B;
+    --bgr-reply-box-2 : #4d0f0f;
 }
