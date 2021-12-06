@@ -33,6 +33,7 @@ $(document).ready((e) => {
     let settingsLock = false
     let delObj = { threads : [], replies : [] }
     let filePreviewDisplay = false
+    let notifyLock = false
 
     let urlBoardPath = location.pathname.split('/')[1]
     let urlThreadPath = parseInt(location.pathname.split('/').pop())
@@ -285,7 +286,7 @@ $(document).ready((e) => {
 
             if (mode === PAGE_MODE_REPLY) {
                 notifyCount++
-                if (notifyCount > 0) {
+                if (notifyCount > 0 && notifyLock === false) {
                     $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
                 }
             }
@@ -529,6 +530,7 @@ $(document).ready((e) => {
 
                         scrollLock = false
                         filePreviewDisplay = false
+                        notifyLock = true
                     }
         
                     if (file) {
@@ -573,6 +575,7 @@ $(document).ready((e) => {
             $(document).off('mousemove').on('mousemove', (e) => {
                 $('#pageTitle').text(defaultTitle)
                 notifyCount = 0
+                notifyLock = false
             })
 
             $(document).off('keyup keydown').on('keyup keydown', (e) => {
