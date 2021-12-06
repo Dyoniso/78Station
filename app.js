@@ -31,7 +31,7 @@ const httpServer = http.createServer(app)
 const io = new Server(httpServer, { maxHttpBufferSize: 12e8 })
 
 httpServer.listen(PORT, HOSTNAME, () => {
-    logger.ok(`Draweb API Started! Listening on port ${HOSTNAME}:${PORT}`)
+    logger.ok(`78Station API Started! Listening on port ${HOSTNAME}:${PORT}`)
 })
 
 module.exports.app = app
