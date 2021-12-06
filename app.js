@@ -38,6 +38,7 @@ module.exports.app = app
 module.exports.io = io
 
 let ms = Math.floor(process.hrtime()[0] * 1000000 + process.hrtime()[1] / 1000) + 'ms'
-exports.sync = require('./api/sync')
-exports.manager = require('./api/manager')
-logger.ok(`Api Manager Started! [${ms}]`)
+exports.sync = require('./api/sync').init(() => {
+    exports.manager = require('./api/manager')
+    logger.ok(`Api Manager Started! [${ms}]`)
+})

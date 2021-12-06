@@ -32,7 +32,7 @@ async function checkTableExists(table) {
     return false
 }
 
-;(async() => {
+exports.init = async(callback) => {
     if (await checkTableExists(tables.BOARD) === false) {
         try {
             await db.query(`
@@ -96,4 +96,5 @@ async function checkTableExists(table) {
     }
 
     fm.updateFileSystem(tables.BOARD)
-})()
+    if (callback) callback()
+}
