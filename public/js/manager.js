@@ -212,6 +212,7 @@ $(document).ready((e) => {
     }
 
     function connectSocket(board, callback) {
+        $('#layerContent').css('opacity', 0.4)
         setUrl(`/${board}`)
         setTitle(`/${board}/ Express - 78Station`)
 
@@ -219,6 +220,8 @@ $(document).ready((e) => {
 
         socket = io('/thread', { query : { board : board } })
         socket.off('connect').on('connect', () => {
+            $('#layerContent').css('opacity', 1)
+            
             updateSocketListeners()
             boardPath = board
             connected = true
@@ -228,16 +231,22 @@ $(document).ready((e) => {
             if (callback) callback()
         })
         socket.off('connect_error').on('connect_error', err => {
+            $('#layerContent').css('opacity', )
+
             if (callback) callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.off('connect_failed').on('connect_failed', err => {
+            $('#layerContent').css('opacity', 1)
+
             if (callback) callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.on('disconnect', (err) => {
+            $('#layerContent').css('opacity', 1)
+
             if (callback) callback(err)
             connected = false
         })
@@ -273,7 +282,7 @@ $(document).ready((e) => {
     let notifyCount = 0
     function updateSocketListeners() {
         socket.off(ltThreadView).on(ltThreadView, (obj) => {
-            $('#layerContent').html(obj)
+            $('#layerContent').css('opacity', 1).html(obj)
 
             if (filePreviewDisplay === false) $('#subjectContainer').hide()
             $('#postSubject').hide()
@@ -284,13 +293,14 @@ $(document).ready((e) => {
             $('#replyContent').append(obj)
             updateListeners()
 
+            listenerScroll = true
+
             if (mode === PAGE_MODE_REPLY) {
                 notifyCount++
                 if (notifyCount > 0 && notifyLock === false) {
                     $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
                 }
             }
-
         })
         socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
             if (obj && obj !== '') {
@@ -303,13 +313,15 @@ $(document).ready((e) => {
             $('.empty-board-container').remove()
             $('#layerContent').append(obj)
             
+            listenerScroll = true
             scrollLock = false
+            
             updateVisibility()
             updateListeners()
         })
         socket.off(ltThreadBegin).on(ltThreadBegin, (obj) => {
             if (obj && obj !== '') {
-                $('#layerContent').html(obj)
+                $('#layerContent').css('opacity', 1).html(obj)
 
                 $('#subjectContainer').show()
                 $('#postSubject').show()
@@ -344,7 +356,7 @@ $(document).ready((e) => {
 
             let color = '#4dd64b'
             if (latency > 300) color = '#fcdb38'
-            if (latency > 600) color = '#ee3434'
+            if (latency > 600) color = '#ff5722'
             el.children('.pulse').css({ background : color })
             el.children('.latency-status').text(latency + ' ms')
         })
@@ -451,18 +463,24 @@ $(document).ready((e) => {
         if (elS.is(':visible')) elS.slideToggle(100)
     }
 
+    let listenerScroll = true
     let scrollLock = false
     let scrollFetched = true
     let scrollAnchor = ''
 
-    $('#layerContent').on('mousewheel', (e) => {
-        if ($('#layerContent').scrollTop() < 5 && scrollFetched) {
+    $('#layerContent').on('scroll', (e) => {
+        if (listenerScroll === false) return
+        let el = $('#layerContent')
+
+        if (el.scrollTop() < 5 && scrollFetched) {
             emitSocketData('channel layer thread scroll', { total : $('.thread-item').length })
             scrollFetched = false
             scrollAnchor = $('.thread-item')[0]
         }
-    
-        if (e.originalEvent.wheelDelta >= 0) scrollLock = true
+
+        let maxScrollTop = el[0].scrollHeight - el.outerHeight();
+        if (maxScrollTop - el.scrollTop() > 30) scrollLock = true
+        else scrollLock = false 
     })
 
     $('.boardBtn').on('click', (e) => {
@@ -526,12 +544,13 @@ $(document).ready((e) => {
 
                         } else if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
 
-                        emitSocketData(postType, obj) 
-                        clearInput()
-
+                        listenerScroll = false
                         scrollLock = false
                         filePreviewDisplay = false
                         notifyLock = true
+
+                        emitSocketData(postType, obj) 
+                        clearInput()
                     }
         
                     if (file) {
