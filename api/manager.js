@@ -251,9 +251,9 @@ io.of('thread').on('connection', async(socket) => {
     let board = handshakeData._query['board']
     let uid = socket.uid
     socket.insideThread = -1
-    socket.board = board
 
     if (!(await checkBoardExists(board))) return throwMessage(smm.FATAL, `Selected board: ${board} not exists.`)
+    socket.board = board
     
     async function clearOnlyThread(thid) {
         for (s of io.of('/thread').sockets.values()) {
@@ -493,7 +493,6 @@ io.of('thread').on('connection', async(socket) => {
         try {
             let path = fm.filesPath + board
             if (fs.existsSync(path+'/'+filename)) filename = utils.generateHash(18) + '.' + mime.split('/').pop()
-            console.log(filename)
 
         } catch (err) {
             logger.error('Error in check if file exists')
@@ -629,7 +628,7 @@ io.of('thread').on('connection', async(socket) => {
 
                 let threads = await getThreads(board, 10, uid)
                 for (s of io.of('/thread').sockets.values()) {
-                    if (s.insideThread === -1) {
+                    if (s.board === board && s.insideThread === -1) {
                         let html = ''
                         for(t of threads) {
                             let replies = await getThreadReplies(board, t.id, uid, 5)
@@ -666,7 +665,7 @@ io.of('thread').on('connection', async(socket) => {
                 })
 
                 for (s of io.of('/thread').sockets.values()) {
-                    if (s.insideThread === -1) {
+                    if (s.board === board && s.insideThread === -1) {
                         s.emit('channel layer thread', pug.renderFile('./public/pug/templades/itemThread.pug', { 
                             thread : thread,
                             board : board,

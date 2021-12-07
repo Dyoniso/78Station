@@ -374,6 +374,7 @@ $(document).ready((e) => {
         selectedThid = thid
 
         $('#postMessage').text('').hide()
+        $('#layerContent').css('opacity', 0.4)
         hideDelBtn()
 
         emitSocketData('channel thread connect', { thid : thid })
