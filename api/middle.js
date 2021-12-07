@@ -15,7 +15,7 @@ exports.uidGen = (req, res, next) => {
 }
 
 exports.uidGenSocket = (socket, next) => {
-    let ip = socket.request.connection.remoteAddress
+    let ip = socket.handshake.headers["x-real-ip"] || socket.request.connection.remoteAddress
 
     try {
         socket.uid = md5(ip)
