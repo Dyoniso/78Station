@@ -6,7 +6,6 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
         - originUrl = `https://78Station.org/files/${board}/${reply.fileInfo.name}`
 
         div(class="d-flex")
-            input(type="checkbox" class="del-value mr-1 mt-1" value=`${reply.id}` data-type="reply")
             div(class="reply-file-info" id="fileInfo") File: !{`<a class="item-hover" href="/files/${board}/${reply.fileInfo.name}">${reply.fileInfo.name}</a>`} (#{reply.fileInfo.size} #{w} x #{h}px) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`}
 
         div(class="fix-img")
@@ -29,5 +28,6 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
     //-if (!reply.fileInfo || reply.fileInfo === '')
         input(type="checkbox" class="del-value mr-1 mt-1" value=`${reply.id}` data-type="reply")
 
-    span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · R. #{reply.id}
-    pre(class="thread-content") !{reply.content}
+    input(type="checkbox" class="del-value mr-1 mt-1" value=`${reply.id}` data-type="reply")
+    span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · !{`<span class="font-weight-bold">R. ${reply.id}</span>`} #{reply.self ? '(you)' : ''}
+    pre(class="reply-content") !{reply.content}

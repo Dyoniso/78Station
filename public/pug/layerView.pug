@@ -45,17 +45,18 @@ html
                                     small(class="p-2" id="delInfo")
                                     span(class="m-2 btn btn-danger font-weight-bold" id="btnDelete" style="display:none") DELETE
 
-                    div(class="thread-input" style="display:none" id="postInput")
+                    div(class="chat-input" style="display:none" id="postInput")
                         div(class="post-message" id="postMessage" style="display:none")
-                        form(class="thread-form" action="" method="")
+                        form(class="chat-form" action="" method="")
                             div(class="d-flex")
-                                label(class="thread-file" for="dragFile")
+                                label(class="chat-file" for="dragFile")
                                     div(class="drag-btn")
 
+                                div(class="file-preview" id="filePreview")
                                 input(type="file" id="dragFile" class="chat-file" style="display:none")        
-                                textarea(type="text" placeholder="Type anything.." class="form-control" id="threadContent")
+                                textarea(type="text" placeholder="Type anything.." class="form-control" id="replyContent")
 
-                                div(class="thread-file")
+                                div(class="chat-file")
                                     div(class="settings-btn" id="settingsBtn")
 
         script(src="/socket.io/socket.io.js")

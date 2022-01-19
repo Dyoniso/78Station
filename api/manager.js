@@ -14,9 +14,6 @@ const fs = require('fs')
 const tables = require('./sync').tables
 const schema = require('./sync').schema
 
-const POST_MODE_THREAD = 'thread'
-const POST_MODE_REPLY = 'reply'
-
 const smm = {
     FATAL : 'fatal',
     ERROR : 'error',
@@ -43,53 +40,8 @@ app.get('/', (req, res) => {
             return renderLayerView(req, res, b.path)
         })
         logger.info(`> Board Express route added! [Route: ${path}]`)
-
-        let threads = await db.query(`SELECT id FROM ${schema.BOARD}.${b.path}`)
-        for (t of threads) {
-            let path = `/${b.path}/${t.id}`
-            app.get(path, (req, res) => {
-                return renderLayerView(req, res, b.path)
-            })
-            logger.info(`- Thread Express route added! [Route: ${path}]`) 
-        }
     }
 })()
-
-async function getThreadById(board, id, uid) {
-    if (!id || isNaN(id)) id = -1
-
-    let thread = null
-    if (id > 0) {
-        try {
-            let q = await db.query(`SELECT * FROM ${schema.BOARD}.${board} WHERE id = $1`, id)
-            q = q[0]
-            if (q) thread = formatThread(q, uid)
-
-        } catch (err) {
-            logger.error('Error after get thread by id: '+ id, err)
-        }
-    }
-    return thread
-}
-
-async function getThreadReplies(board, thid, uid, limit) {
-    if (!limit || isNaN(limit)) limit = 25
-    if (!thid || isNaN(thid)) thid = -1
-
-    let replies = []
-    if (thid > 0) {
-        try {
-            let q = await db.query(`SELECT * FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 ORDER BY id DESC LIMIT $2`, [thid, limit])
-            if (q) for (r of q) replies.push(formatThreadReply(r, uid))
-
-        } catch (err) {
-            logger.error('Error after get thread replies from thid: '+ thid, err)
-        }
-    }
-
-    replies.sort((x, y) => x.id - y.id)
-    return replies
-}
 
 async function getBoardReplies(board, limit, uid, offSet) {
     if (!offSet || isNaN(offSet) || offSet < 0) offSet = 0
@@ -102,34 +54,9 @@ async function getBoardReplies(board, limit, uid, offSet) {
     } catch (err) {
         logger.error('Error after get board data', err)
     }
+
+    replies.sort((x, y) =>  x.id - y.id)
     return replies
-}
-
-function formatThread(thread, uid) {
-    if (thread.file_info && thread.file_info !== '') thread.file_info = JSON.parse(thread.file_info)
-
-    let op = false
-    if (uid && uid === thread.uid) op = true
-
-    let thd = {
-        id : thread.id,
-        op : op,
-        username : thread.username,
-        updated : thread.updated,
-        content :  thread.content,
-        rawDate : thread.date,
-        date : utils.formatTimestamp(thread.date),
-    }
-    if (thread.file_info && thread.file_info) {
-        thd.fileInfo = {
-            name : thread.file_info.name,
-            rawSize : thread.file_info.size,
-            size : utils.formatSize(thread.file_info.size),
-            mime : thread.file_info.mime,
-            dims : thread.file_info.dims,
-        }
-    }
-    return thd
 }
 
 function formatReply(reply, uid) {
@@ -171,9 +98,8 @@ async function checkBoardExists(board) {
 }
 
 function translateContent(content, board) {
-    let rexhttp = new RegExp(/((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)/g)
+    let rexhttp = new RegExp(/(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/g)
     let rexSpoiler = new RegExp(/\[spoiler\](.*)\[\/spoiler\]/g)
-    let rexRainbow = new RegExp(/\(\(\((.*)\)\)\)/g)
 
     let rexIvQuote = new RegExp(/^&lt;(.*)$/mg)
     let rexBold = new RegExp(/\*\*(.*)\*\*/g)
@@ -183,14 +109,13 @@ function translateContent(content, board) {
     let rexUnderline = new RegExp(/__(.*)__/g)
     let rexQuote = new RegExp(/^&gt;(.*)$/mg)
     let rexQuoteReply = new RegExp(/^&gt;&gt;(\d+)/mg)
-    let rexQuoteChain = new RegExp(/^&gt;&gt;&gt;\/([a-zA-Z]+)\/(\d+)/mg)
+    let rexQuoteBoard = new RegExp(/^&gt;&gt;&gt;\/([a-zA-Z]+)\//mg)
 
     content = content
     .replace(rexhttp, '<a href="$1">$1</a>')
     .replace(rexSpoiler, '<span class="spoiler-content">$1</span>')
-    .replace(rexRainbow, '<span class="rainbow_text_animated">((($1)))</span>')
-    .replace(rexQuoteChain, `<a href="/boards/view?chain=$1&topic_id=$2" class="quote-board" data-board="$1">&gt;&gt;&gt;/$1/$2</a>`)
-    .replace(rexQuoteReply, `<a href="/${board}/#$1" class="quote-reply">&gt;&gt;$1</a>`)
+    .replace(rexQuoteBoard, `<a href="/$1" class="quote-board boardBtn" data-path="$1">&gt;&gt;&gt;/$1/</a>`)
+    .replace(rexQuoteReply, `<a href="/${board}#$1" class="quote-reply">&gt;&gt;$1</a>`)
     .replace(rexQuote, '<span class="quote">&gt;$1</span>')
     .replace(rexIvQuote, '<span class="iv-quote">&lt;$1</span>')
     .replace(rexBold, '<span class="td-bold">$1</span>')
@@ -204,9 +129,7 @@ function translateContent(content, board) {
 
 //Socket.io
 let pageSize = process.env.PAGE_SIZE | 20
-let threadReplyLimit = process.env.THREAD_REPLY_LIMIT
 let boardInterval = process.env.BOARD_INTERVAL
-let replyInterval = process.env.REPLY_INTERVAL
 let waitList = []
 
 function checkWaitList(uid) {
@@ -232,28 +155,6 @@ io.of('board').on('connection', async(socket) => {
     if (!(await checkBoardExists(board))) return throwMessage(smm.FATAL, `Selected board: ${board} not exists.`)
     socket.board = board
     
-    async function clearOnlyThread(thid) {
-        for (s of io.of('/thread').sockets.values()) {
-            if (s.board === board) {
-                s.emit('channel layer thread begin', `
-                    <h4 class="p-2"> Thread Deleted! <br> Redirecting.. </h4>
-                    <script>location.href = '/';</script>
-                `)
-            }
-        }  
-    }
-
-    async function updateReplyList(thid) {
-        let replies = await getThreadReplies(board, thid, uid, 25)
-        let html = formatReplyToHtml(replies)
-
-        for (s of io.of('/thread').sockets.values()) {
-            if (s.board === board) {
-                s.emit('channel layer reply begin', html)
-            }
-        }
-    }
-
     function removeRoute(name) {
         let routes = app._router.stack
         routes.forEach((r, i) => {
@@ -261,17 +162,6 @@ io.of('board').on('connection', async(socket) => {
                 if (r.route.path === name) routes.splice(i, 1)
             }
         })
-    }
-
-    async function updateThreadList() {
-        let threads = await getBoardReplies(board, 10, uid)
-        let html = await convertHtml(threads)
-
-        for (s of io.of('/thread').sockets.values()) {
-            if (s.board === board) {
-                s.emit('channel layer board begin', html)
-            }
-        }
     }
 
     function formatReplyToHtml(replies) {
@@ -285,18 +175,8 @@ io.of('board').on('connection', async(socket) => {
         return html
     }
 
-    async function convertHtml(threads) {
-        let html = ''
-        for(t of threads) {
-            let replies = await getThreadReplies(board, t.id, uid, 5)
-            html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { thread : t, board : board, replies : replies })
-        }
-        return html
-    }
-
-    let replies = await getBoardReplies(board, 10, uid)
+    let replies = await getBoardReplies(board, 20, uid)
     let html = formatReplyToHtml(replies)
-    console.log(html)
     socket.emit('channel layer board begin', html)
 
     socket.latencyLimit = 1000
@@ -313,23 +193,18 @@ io.of('board').on('connection', async(socket) => {
     })
 
     socket.on('channel post delete', async(obj) => {
-        let threads = obj.threads
-        let replies = obj.replies
+        let replies = obj.items
         let password = obj.password
 
-        if (Array.isArray(threads) === false) return throwMessage('Invalid thread request')
         if (Array.isArray(replies) === false) return throwMessage('Invalid reply request')
 
-        if (replies.length > 0) throwMessage(smm.ERROR, 'This function is currently disabled.')
-
-        let delCountThreads = 0
+        let replyUpdated = []
         let delCountReplies = 0
-        let threadUpdate = []
 
-        logger.info('Starting del thread sync from items: '+JSON.stringify(threads))
-        for (t of threads) {
+        logger.info('Starting del reply sync from items: '+JSON.stringify(replies))
+        for (r of replies) {
             try {
-                let q = await db.query(`DELETE FROM ${schema.BOARD}.${board} WHERE id = $1 AND password = $2 RETURNING file_info,id`, [t.id, password])
+                let q = await db.query(`DELETE FROM ${schema.BOARD}.${board} WHERE id = $1 AND password = $2 RETURNING file_info,id`, [r.id, password])
                 q = q[0]
 
                 if (q && q.file_info && q.file_info !== '') {
@@ -338,76 +213,37 @@ io.of('board').on('connection', async(socket) => {
                 }
 
                 if (q && q.id && q.id > 0) {
-                    logger.ok(`* Thread Deleted! ID: ${t.id}`)
-                    delCountThreads++
-
-                    let path = `/${board}/${q.id}`
-                    removeRoute(path)
-
-                    if (!threadUpdate.includes(q.id)) threadUpdate.push(q.id)
-
-                    let rs = await db.query(`DELETE FROM ${schema.THREAD_REPLY}.${board} WHERE thid = $1 RETURNING file_info,id`, [t.id])
-                    for (r of rs) {
-                        if (r.file_info && r.file_info !== '') {
-                            let fileInfo = JSON.parse(q.file_info)
-                            await fm.deleteFile(board, { name : fileInfo.name })   
-                        }
-                        delCountReplies++
-                        logger.ok(`* Reply Deleted! Thid: ${t.id} ID: ${r.id}`)
-                    }
-                }
-
-            } catch (err) {
-                logger.error('Error after delete thread item. ID: '+t.id, err)
-            }
-        }
-
-        logger.info('Starting del reply sync from items: '+JSON.stringify(replies))
-        for (r of replies) {
-            try {
-                let q = await db.query(`DELETE FROM ${schema.THREAD_REPLY}.${board} WHERE id = $1 AND password = $3 AND thid = $2 RETURNING file_info,id`, [r.id, r.thid, password])
-                q = q[0]
-
-                if (q && q.file_info && q.file_info !== '') {
-                    fileInfo = JSON.parse(q.file_info)
-                    await fm.deleteFile(board, { name : fileInfo.name })
-                }
-                if (q && q.id && q.id > 0) {
-                    logger.ok(`* Reply Deleted! ID: ${r.id} Thid: ${r.thid}`)
+                    logger.ok(`* Reply Deleted! ID: ${t.id}`)
                     delCountReplies++
-                    if (!threadUpdate.includes(r.thid)) threadUpdate.push(r.thid)
+                    replyUpdated.push(q.id)
                 }
 
             } catch (err) {
-                logger.error(`Error after delete reply item. ID: ${r.id} Thid: ${r.thid}`, err)
+                logger.error('Error after delete Reply item. ID: '+r.id, err)
             }
         }
 
-        if (delCountThreads <= 0 && delCountReplies <= 0) throwMessage(smm.ERROR, 'Wrong password. Check if you wrote correctly')
-        else {
-            if (delCountThreads > 0) {
-                updateThreadList() 
-                for (t of threadUpdate) {
-                    clearOnlyThread(t)
+        if (delCountReplies > 0) {
+            for (s of io.of('/board').sockets.values()) {
+                if (s.board === board) {
+                    s.emit('channel reply delete', replyUpdated)
                 }
-            }
-            else if (delCountReplies > 0) {
-                updateThreadList()
-                for (t of threadUpdate) updateReplyList(t)
             }
         }
     })
 
-    socket.on('channel layer thread scroll', async(obj) => {
+    socket.on('channel layer board scroll', async(obj) => {
         let total = parseInt(obj.total)
         if (!total || total < 0 || isNaN(total)) total = -1
         if (total > 0) {
-            let threads = await getBoardReplies(board, pageSize, uid, total)
+            let replies = await getBoardReplies(board, pageSize, uid, total)
             let html = ''
-            for (t of threads) {
-                html = html + pug.renderFile('./public/pug/templades/itemThread.pug', { thread : t, board : board })
+            for (r of replies) {
+                html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                    reply : r, board : board
+                })
             }
-            socket.emit('channel layer thread scroll', html)
+            socket.emit('channel layer board scroll', html)
         }
     })
 
@@ -487,7 +323,7 @@ io.of('board').on('connection', async(socket) => {
 
         if (username <= 0) username = 'Anon'
         if (!password || password.length <= 0) password = utils.generateHash(14)
-        if (content.length <= 3) return throwMessage(smm.ERROR, 'Invalid thread. Write content longer than 3 characters')
+        if (!file && content.length <= 0) return throwMessage(smm.ERROR, 'Content cannot be empty')
         if (content.length > 8000) return throwMessage(smm.ERROR, 'The content of your post must be less than 8000 characters.')
         
         username = utils.htmlEnc(username)
@@ -533,8 +369,6 @@ io.of('board').on('connection', async(socket) => {
                 date : q.date,
             }, uid)
 
-            throwMessage(smm.SUCCESS, `Reply Added! ID: ${reply.id}`)
-
             let html = pug.renderFile('./public/pug/templades/itemReply.pug', { 
                 reply : reply,
                 board : board
@@ -546,7 +380,6 @@ io.of('board').on('connection', async(socket) => {
             }
 
         } catch (err) {
-            throw err
             logger.error('Error in register reply in db', err)
             throwMessage(smm.ERROR, 'Error in create reply!')
         }

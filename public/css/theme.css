@@ -39,9 +39,6 @@
 .quote-board {
     color : var(--quote-board); 
 }
-.quote-thread {
-    color : var(--quote-thread);
-}
 .quote-reply {
     text-decoration: underline;
     color : var(--quote-reply);

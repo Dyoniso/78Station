@@ -31,15 +31,11 @@ $(document).ready((e) => {
     let defaultPassword = ''
     let selectedThid = -1
     let settingsLock = false
-    let delObj = { threads : [], replies : [] }
+    let delObj = []
     let filePreviewDisplay = false
     let notifyLock = false
 
     let urlBoardPath = location.pathname.split('/')[1]
-    let urlThreadPath = parseInt(location.pathname.split('/').pop())
-
-    const PAGE_MODE_THREAD = 'thread'
-    const PAGE_MODE_REPLY = 'reply'
 
     const smm = {
         FATAL : 'fatal',
@@ -47,13 +43,17 @@ $(document).ready((e) => {
         SUCCESS : 'success'
     }
 
-    let mode = PAGE_MODE_THREAD
-
     ;(() => {
         if (defaultName === '' || !defaultName) {
             let defaultNameBegin = 'Anon'
             localStorage.defaultName = defaultNameBegin
             defaultName = defaultNameBegin
+        }
+
+        if (urlBoardPath !== '') {
+            connectSocket(urlBoardPath, (err) => {
+                if (err) return
+            })
         }
 
         defaultPassword = localStorage.defaultPassword
@@ -110,7 +110,7 @@ $(document).ready((e) => {
         $('#btnRemoveFile').off('click').on('click', (e) => {
             $('#filePreview').html('')
             $('#dragFile').val('')
-            $('#threadContent').css('height', '40px')
+            $('#replyContent').css('height', '40px')
 
             filePreviewDisplay = false
         })
@@ -138,15 +138,15 @@ $(document).ready((e) => {
         dT.items.add(file)
         $('#dragFile')[0].files = dT.files
 
-        $('#threadContent').css('height', 'auto')
+        $('#replyContent').css('height', 'auto')
     }
 
     function clearInput() {
         $('#postSubject').val('')
-        $('#threadContent').val('')
-        $('#threadUsername').val('')
+        $('#replyContent').val('')
+        $('#replyUsername').val('')
         $('#dragFile').val('')
-        $('#threadContent').removeAttr('style')
+        $('#replyContent').removeAttr('style')
         $('#filePreview').empty()
     }
 
@@ -202,9 +202,7 @@ $(document).ready((e) => {
         if (socket) socket.disconnect()
 
         socket = io('/board', { query : { board : board } })
-        socket.off('connect').on('connect', () => {
-            $('#layerContent').css('opacity', 1)
-            
+        socket.off('connect').on('connect', () => {  
             updateSocketListeners()
             boardPath = board
             connected = true
@@ -214,22 +212,19 @@ $(document).ready((e) => {
             if (callback) callback()
         })
         socket.off('connect_error').on('connect_error', err => {
-            $('#layerContent').css('opacity', )
-
+            $('#layerContent').css('opacity', 1)
             if (callback) callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.off('connect_failed').on('connect_failed', err => {
             $('#layerContent').css('opacity', 1)
-
             if (callback) callback(err)
             handleMessage(smm.FATAL, err)
             connected = false
         })
         socket.on('disconnect', (err) => {
             $('#layerContent').css('opacity', 1)
-
             if (callback) callback(err)
             connected = false
         })
@@ -240,6 +235,7 @@ $(document).ready((e) => {
     let ltBoardBegin = 'channel layer board begin'
     let ltLayerScroll = 'channel layer board scroll'
     let ltMessage = 'channel status message'
+    let ltReplyDelete = 'channel reply delete'
 
     let pingInterval = null
     function initLatencyStatus() {
@@ -266,11 +262,21 @@ $(document).ready((e) => {
             $('.empty-board-container').remove()
             $('#layerContent').append(obj)
             
+            notifyCount++
+            if (notifyCount > 0 && notifyLock === false) {
+                $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
+            }
+
             listenerScroll = true
             scrollLock = false
             
             updateVisibility()
             updateListeners()
+        })
+        socket.off(ltReplyDelete).on(ltReplyDelete, (obj) => {
+            for (i of obj) {
+                $('#reply-'+i).remove()
+            }
         })
         socket.off(ltBoardBegin).on(ltBoardBegin, (obj) => {
             if (obj && obj !== '') {
@@ -331,10 +337,10 @@ $(document).ready((e) => {
     }
 
     function updateListeners() {
+        updateBoardBtn()
+
         $('.btnVisibility').on('click', (e) => {
             let t = $(e.target)
-            let el = t.parents('.delThread').parent('.thread-item').find('.wrap-content')
-            let atrId = t.parents('.delThread').parent('.thread-item').attr('id')
 
             let storageItems = JSON.parse(localStorage.getItem(`hid-${boardPath}`))
             if (el.is(':visible')) {
@@ -351,32 +357,22 @@ $(document).ready((e) => {
             localStorage.setItem(`hid-${boardPath}`, JSON.stringify(storageItems))
         })
 
-        $('.delThread').find('input[type=checkbox]').off('change').on('change', (e) => {
+        $('.layer-content').find('input[type=checkbox]').off('change').on('change', (e) => {
             let el = $(e.target)
-            let thid = parseInt(el.parents('.delThread').data('id'))
-            let type = el.data('type')
+            let id = parseInt(el.val())
 
-            if (type === PAGE_MODE_THREAD) {
-                if (el.prop('checked')) delObj.threads.push({ id : thid })
-                else delObj.threads = delObj.threads.filter((i) => i.id !== thid)
-
-            } else {
-                let rid = parseInt($(e.target).parents('.reply-item').data('id'))
-                if (el.prop('checked')) delObj.replies.push({ thid : thid, id : rid })
-                else delObj.replies = delObj.replies.filter((i) => i.id !== rid) 
+            if (!isNaN(id) && id > 0) {
+                if (el.prop('checked')) delObj.push({ id : id })
+                else delObj = delObj.filter((i) => i.id !== id)
             }
 
             let elS = $('.settings-box')
-            if (delObj.threads.length > 0 || delObj.replies.length > 0) {
+            if (delObj.length > 0) {
                 settingsLock = true
                 $('#btnDelete').show()
                 $('#delInfo').html(`
-                    Thread (${delObj.threads.length})
+                    Items (${delObj.length})
                 `)
-                /*$('#delInfo').html(`
-                    Thread (${delObj.threads.length})
-                    Reply (${delObj.replies.length})
-                `)*/
                 if (!elS.is(':visible')) elS.slideToggle(100)
 
             } else {
@@ -386,7 +382,7 @@ $(document).ready((e) => {
     }
 
     function hideDelBtn() {
-        delObj = { threads : [], replies : [] }
+        delObj = []
 
         let elS = $('.settings-box')
         settingsLock = false
@@ -405,9 +401,9 @@ $(document).ready((e) => {
         let el = $('#layerContent')
 
         if (el.scrollTop() < 5 && scrollFetched) {
-            emitSocketData('channel layer thread scroll', { total : $('.thread-item').length })
+            emitSocketData(ltLayerScroll, { total : $('.reply-item').length })
             scrollFetched = false
-            scrollAnchor = $('.thread-item')[0]
+            scrollAnchor = $('.reply-item')[0]
         }
 
         let maxScrollTop = el[0].scrollHeight - el.outerHeight();
@@ -415,11 +411,15 @@ $(document).ready((e) => {
         else scrollLock = false 
     })
 
-    $('.boardBtn').on('click', (e) => {
-        let board = $(e.target).data('path')
-        connectSocket(board)
-        mode = PAGE_MODE_THREAD
-    })
+    function updateBoardBtn() {
+        $('.boardBtn').off('click').on('click', (e) => {
+            e.preventDefault()
+
+            let board = $(e.target).data('path')
+            connectSocket(board)
+        })
+    }
+    updateBoardBtn()
 
     function setUrl(f) {
         history.pushState('data', '', location.origin + f)
@@ -439,10 +439,10 @@ $(document).ready((e) => {
             $('#postInput').slideToggle(100)
             $('#postMessage').text('').hide()
 
-            $('#threadUsername').off('keypress').on('keypress', (e) => {
+            $('#replyUsername').off('keypress').on('keypress', (e) => {
                 if (e.keyCode === 13) e.preventDefault()
             })
-            $('#threadContent').off('keydown').on('keydown', (e) => {
+            $('#replyContent').off('keydown').on('keydown', (e) => {
                 let key = e.keyCode || e.charCode
 
                 if (shiftKey === false && key === 13) {
@@ -452,9 +452,9 @@ $(document).ready((e) => {
         
                     function sendPostData(file) {
                         let title = $('#postSubject').val()
-                        let content = $('#threadContent').val()
+                        let content = $('#replyContent').val()
 
-                        if (content.length <= 3) return handleMessage(smm.ERROR, 'Invalid thread. Write content longer than 3 characters')
+                        if (!file && content.length <= 0) return
 
                         let obj = {
                             username : $('#settingsUsername').val(),
@@ -500,9 +500,16 @@ $(document).ready((e) => {
             })
 
             $('#btnDelete').off('click').on('click', (e) => {
-                if (delObj.threads.length > 0 || delObj.replies.length > 0) {
-                    delObj.password = defaultPassword
-                    emitSocketData('channel post delete', delObj)
+                if (delObj.length > 0) {
+                    emitSocketData('channel post delete', {
+                        password : defaultPassword,
+                        items : delObj
+                    })
+                    
+                    let elS = $('.settings-box')
+                    if (!elS.is(':visible')) elS.slideToggle(100)
+                    delObj = []
+                    settingsLock = false
                 }
             })
 
@@ -517,9 +524,11 @@ $(document).ready((e) => {
             })
 
             $(document).off('mousemove').on('mousemove', (e) => {
-                $('#pageTitle').text(defaultTitle)
-                notifyCount = 0
-                notifyLock = false
+                if (notifyCount > 0) {
+                    $('#pageTitle').text(defaultTitle)
+                    notifyCount = 0
+                    notifyLock = false
+                }
             })
 
             $(document).off('keyup keydown').on('keyup keydown', (e) => {
@@ -572,6 +581,7 @@ $(document).ready((e) => {
             })
 
             setInterval(() => {
+                console.log(scrollLock)
                 if (scrollLock === false) scrollDown()
             }, 300)
         }
@@ -591,8 +601,8 @@ $(document).ready((e) => {
             let els = $('.settings-box')
             if (els.is(':visible')) els.slideToggle(100)
 
-            $('#threadContent').off('keypress')
-            $('#threadUsername').off('keypress')
+            $('#replyContent').off('keypress')
+            $('#replyUsername').off('keypress')
             $('.logo').off('click')
             $(document).off('click').off('dragover').off('dragleave').off('drop')
             .off('keyup keydown')

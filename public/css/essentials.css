@@ -47,13 +47,13 @@ pre {
     background:var(--bgr-secondary-dark);
 }
 
-.thread-input {
+.chat-input {
     min-width: 0;
     z-index: 2;
     background: var(--bgr-secondary-light);
 }
 
-.thread-file {
+.chat-file {
     border: 1px solid var(--bgr-secondary);
     display: flex;
     align-items: center;
@@ -142,11 +142,6 @@ textarea.form-control {
     float: left;
 }
 
-.thread-item {
-    clear: left;
-    padding: 8px 8px 0 8px;
-}
-
 .img-fit {
     margin: 8px;
     max-width: 250px;
@@ -175,7 +170,7 @@ textarea.form-control {
     margin: 8px;
 }
 
-.thread-content {
+.reply-content {
     overflow: unset;
     font-family: inherit;
     word-break: break-all;
@@ -236,33 +231,11 @@ textarea.form-control {
     border-radius:12px;
 }
 
-.thread-header {
-    font-size: 14px;
-    color: var(--color-primary);
-}
-
-.thread-header:hover {
-    color: var(--quote-thread);
-    cursor: pointer;
-}
-
-.thread-view {
-    padding: 8px;
-    font-size: 16px;
-}
-
-.thread-view .img-fit {
-    margin: 8px;
-    object-fit: cover;
-    max-width: 350px;
-    max-height: 280px;
-    overflow: auto;
-}
 
 .reply-item .img-fit {
     margin: 8px;
-    max-width: 180px;
-    max-height: 120px;
+    max-width: 280px;
+    max-height: 220px;
     overflow: auto;
 }
 
