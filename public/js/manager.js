@@ -56,15 +56,6 @@ $(document).ready((e) => {
             defaultName = defaultNameBegin
         }
 
-        if (urlBoardPath !== '') {
-            connectSocket(urlBoardPath, (err) => {
-                if (err) return
-                if (!isNaN(urlThreadPath) && urlThreadPath > 0) {
-                    setTimeout(() => connectThread(urlThreadPath), 500)
-                }
-            })
-        }
-
         defaultPassword = localStorage.defaultPassword
         if (!defaultPassword || defaultPassword.length <= 0) {
             generatePassword()
@@ -115,10 +106,6 @@ $(document).ready((e) => {
         `).fadeIn(200)
 
         filePreviewDisplay = true
-        
-        if (mode === PAGE_MODE_REPLY) {
-            $('#subjectContainer').show()
-        }
 
         $('#btnRemoveFile').off('click').on('click', (e) => {
             $('#filePreview').html('')
@@ -126,10 +113,6 @@ $(document).ready((e) => {
             $('#threadContent').css('height', '40px')
 
             filePreviewDisplay = false
-
-            if (mode === PAGE_MODE_REPLY) {
-                $('#subjectContainer').hide()
-            }
         })
     }
 
@@ -218,7 +201,7 @@ $(document).ready((e) => {
 
         if (socket) socket.disconnect()
 
-        socket = io('/thread', { query : { board : board } })
+        socket = io('/board', { query : { board : board } })
         socket.off('connect').on('connect', () => {
             $('#layerContent').css('opacity', 1)
             
@@ -253,12 +236,9 @@ $(document).ready((e) => {
     }
     
     let ltLatency = 'channel latency'
-    let ltLayerThread = 'channel layer thread'
-    let ltThreadBegin = 'channel layer thread begin'
-    let ltLayerScroll = 'channel layer thread scroll'
-    let ltReplyBegin = 'channel layer reply begin'
-    let ltThreadView = 'channel layer thread view'
-    let ltReply = 'channel layer reply'
+    let ltLayerBoard = 'channel layer board'
+    let ltBoardBegin = 'channel layer board begin'
+    let ltLayerScroll = 'channel layer board scroll'
     let ltMessage = 'channel status message'
 
     let pingInterval = null
@@ -281,34 +261,7 @@ $(document).ready((e) => {
 
     let notifyCount = 0
     function updateSocketListeners() {
-        socket.off(ltThreadView).on(ltThreadView, (obj) => {
-            $('#layerContent').css('opacity', 1).html(obj)
-
-            if (filePreviewDisplay === false) $('#subjectContainer').hide()
-            $('#postSubject').hide()
-
-            updateListeners()
-        })
-        socket.off(ltReply).on(ltReply, (obj) => {
-            $('#replyContent').append(obj)
-            updateListeners()
-
-            listenerScroll = true
-
-            if (mode === PAGE_MODE_REPLY) {
-                notifyCount++
-                if (notifyCount > 0 && notifyLock === false) {
-                    $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
-                }
-            }
-        })
-        socket.off(ltReplyBegin).on(ltReplyBegin, (obj) => {
-            if (obj && obj !== '') {
-                $('#replyContent').html(obj)
-                updateListeners()
-            }
-        })
-        socket.off(ltLayerThread).on(ltLayerThread, (obj) => {
+        socket.off(ltLayerBoard).on(ltLayerBoard, (obj) => {
             $('.error-container').remove()
             $('.empty-board-container').remove()
             $('#layerContent').append(obj)
@@ -319,11 +272,10 @@ $(document).ready((e) => {
             updateVisibility()
             updateListeners()
         })
-        socket.off(ltThreadBegin).on(ltThreadBegin, (obj) => {
+        socket.off(ltBoardBegin).on(ltBoardBegin, (obj) => {
             if (obj && obj !== '') {
                 $('#layerContent').css('opacity', 1).html(obj)
 
-                $('#subjectContainer').show()
                 $('#postSubject').show()
 
                 hideDelBtn()
@@ -378,27 +330,7 @@ $(document).ready((e) => {
         } 
     }
 
-    function connectThread(thid) {
-        setUrl(`/${boardPath}/${thid}`)
-        setTitle(`/${boardPath}/${thid} - 78Station`)
-
-        mode = PAGE_MODE_REPLY
-        selectedThid = thid
-
-        $('#postMessage').text('').hide()
-        $('#layerContent').css('opacity', 0.4)
-        hideDelBtn()
-
-        emitSocketData('channel thread connect', { thid : thid })
-    }
-
     function updateListeners() {
-        //Connect Thread
-        $('.thread-header').off('click').on('click', (e) => {
-            let id = parseInt($(e.target).data('id'))
-            if (!isNaN(id) && id > 0) connectThread(id)
-        })
-
         $('.btnVisibility').on('click', (e) => {
             let t = $(e.target)
             let el = t.parents('.delThread').parent('.thread-item').find('.wrap-content')
@@ -534,15 +466,7 @@ $(document).ready((e) => {
                         
                         if (obj.username <= 0) obj.username = 'Anon'
         
-                        let postType = 'channel add thread'
-                        if (mode === PAGE_MODE_REPLY) {
-                            obj.thid = selectedThid
-                            postType = 'channel add thread reply'
-                            delete obj.title
-                            
-                            $('#subjectContainer').hide()
-
-                        } else if (file === null || file.length === 0) return handleMessage(smm.ERROR, 'Your post needs an image, after all this is an imageboard')
+                        let postType = 'channel add reply'
 
                         listenerScroll = false
                         scrollLock = false
