@@ -349,3 +349,34 @@ textarea.form-control {
         display: none;
     }
 }
+
+.item-video {
+    position: relative;
+}
+
+.item-video::after {
+    font-family: sans-serif;
+    content: "▶";
+    display: inline-block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    background: #000;
+    color: #fff;
+    border-radius: 100%;
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    box-sizing: border-box;
+    font-size: 14px;
+    padding-left: 4px;
+    transform: translate(-50%,-50%);
+    opacity: .8;
+    box-shadow: 0 0 3px #fff;
+    pointer-events: none;
+}
+
+.item-video:hover::after {
+    opacity: 10;
+}

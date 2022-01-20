@@ -6,7 +6,9 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
         - originUrl = `https://78Station.org/files/${board}/${reply.fileInfo.name}`
 
         div(class="d-flex")
-            div(class="reply-file-info" id="fileInfo") File: !{`<a class="item-hover" href="/files/${board}/${reply.fileInfo.name}">${reply.fileInfo.name}</a>`} (#{reply.fileInfo.size} #{w} x #{h}px) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`}
+            - dims = ''
+            - if (w > 0 && h > 0) dims = ` ${w}x${h}px`
+            div(class="reply-file-info" id="fileInfo") File: !{`<a class="item-hover" href="/files/${board}/${reply.fileInfo.name}">${reply.fileInfo.name}</a>`} (#{reply.fileInfo.size}#{dims}) Search: !{`<a target="_blank" class="item-hover" href="//www.google.com/searchbyimage?image_url=${originUrl}">Google</a>`} / !{`<a target="_blank" class="item-hover" href="//iqdb.org/?url=${originUrl}">IQDB</a>`} / !{`<a target="_blank" class="item-hover" href="//saucenao.com/search.php?url=${originUrl}"> SauceNao </a>`}
 
         div(class="fix-img")
             div(class="d-flex justify-content-center")
@@ -14,15 +16,18 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
                 - type = reply.fileInfo.mime.split('/')[0]
 
                 if (type === 'video')
-                    video(controls="" class="video-fit")
-                        source(src=(fileUrl))
+                    - thumbUrl = `/files/${board}/thumb/${reply.fileInfo.thumbName}`
+                    div(class="item-video")
+                        img(onClick=('openModal(this)') class="img-fit" src=(thumbUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
 
                 else if (type === 'audio')
-                    audio(controls="" class="audio-fit")
-                        source(src=(fileUrl))
+                    - audioUrl = `/pub/audio_icon.png`
+                    div(class="item-audio")
+                        img(onClick=('openModal(this)') class="img-fit" src=(audioUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
 
-                else 
-                    img(onClick=('openModal(this)') class="img-fit" src=(fileUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-size=(reply.fileInfo.size) date-width=(reply.fileInfo.width) data-height=(reply.fileInfo.height) data-id=(reply.id)) 
+                else
+                    div(class="item-image")
+                        img(onClick=('openModal(this)') class="img-fit" src=(fileUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-size=(reply.fileInfo.size) date-width=(reply.fileInfo.width) data-mime=(reply.fileInfo.mime) data-height=(reply.fileInfo.height) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
 
     
     //-if (!reply.fileInfo || reply.fileInfo === '')

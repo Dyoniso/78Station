@@ -74,12 +74,14 @@ function formatReply(reply, uid) {
         date : utils.formatTimestamp(reply.date),
     }
     if (reply.file_info && reply.file_info !== '') {
+        let thumbName = reply.file_info.thumbName
         rpy.fileInfo = {
             name : reply.file_info.name,
             rawSize : reply.file_info.size,
             size : utils.formatSize(reply.file_info.size),
             mime : reply.file_info.mime,
             dims : reply.file_info.dims,
+            thumbName : thumbName ? thumbName : '',
         }
     }
     return rpy
@@ -209,7 +211,7 @@ io.of('board').on('connection', async(socket) => {
 
                 if (q && q.file_info && q.file_info !== '') {
                     let fileInfo = JSON.parse(q.file_info)
-                    await fm.deleteFile(board, { name : fileInfo.name })
+                    await fm.deleteFile(board, { name : fileInfo.name, thumbName : fileInfo.thumbName, })
                 }
 
                 if (q && q.id && q.id > 0) {
@@ -306,7 +308,8 @@ io.of('board').on('connection', async(socket) => {
             mime : mime,
             base64 : base64,
             size : size,
-            dims : dims
+            dims : dims,
+            thumbName : '',
         }
     }
 
@@ -342,6 +345,10 @@ io.of('board').on('connection', async(socket) => {
         }
 
         try {
+            if (fileInfo && fileInfo !== '') {
+                fileInfo.thumbName = await fm.registerFile(board, { name : fileInfo.name, base64 : base64, mime : fileInfo.mime })
+            }
+
             let q = await db.query(`INSERT INTO ${schema.BOARD}.${board}(uid,username,content,file_info,password) VALUES ($1, $2, $3, $4, $5) RETURNING id,date,file_info`, [
                 uid,
                 username,
@@ -353,10 +360,6 @@ io.of('board').on('connection', async(socket) => {
 
             let ctn = content
             if (ctn.length > 120) ctn = ctn.substr(0, 120)
-
-            if (fileInfo && fileInfo !== '') {
-                await fm.registerFile(board, { name : fileInfo.name, base64 : base64 })
-            }
 
             logger.ok(`Reply: ${q.id} added! Content: ${content}`)
                 

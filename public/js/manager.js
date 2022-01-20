@@ -8,31 +8,45 @@ function openModal(e) {
     let heigth = e.data('height')
     let date = e.data('date')
     let href = e.data('href')
+    let mime = e.data('mime')
 
     $('#btnDownloadImgPreview').attr('href', href)
+    let dims = ''
+    if (width && heigth) dims = ` ${width}x${heigth}px`
     $('#modalPreviewTitle').html(`
-        ${id} - <a href="${href}" class="file-name text-warning">${filename}</a> (${size} ${width}x${heigth}px) - ${date}
+        ${id} - <a href="${href}" class="file-name text-warning">${filename}</a> (${size}${dims}) - ${date}
     `)
+
     href = location.origin + href
     $('#searchUrl').html(`
         Search: <a target="_blank" class="text-warning" href="//www.google.com/searchbyimage?image_url=${href}">Google</a> / <a target="_blank" class="text-warning" href="//iqdb.org/?url=${href}">IQDB</a> / <a target="_blank" class="text-warning" href="//saucenao.com/search.php?url=${href}">SauceNao</a>
     `)
-    $('#modalImgPreview').attr('src', e.attr('src'))
+    if (mime.includes('audio')) $('#modalImgPreview').html(`
+        <audio controls loop autoplay class="m-4 modal-img-preview">
+            <source src="${href}" />
+        </audio>
+    `)
+    else if (mime.includes('video')) $('#modalImgPreview').html(`
+        <video onloadstart="this.volume=0.5" controls loop autoplay class="modal-img-preview">
+            <source src="${href}" />
+        </video>
+    `)
+    else $('#modalImgPreview').html(`
+        <img class="modal-img-preview" src="${href}" />
+    `)
+
     $('#imgViewModal').modal('show')
 }
 
 $(document).ready((e) => {
     let shiftKey = false
     let isFinish = true
-    let connected = false
     let socket = null
     let boardPath = $('#boardPath').val()
     let defaultName = localStorage.defaultUsername
     let defaultPassword = ''
-    let selectedThid = -1
     let settingsLock = false
     let delObj = []
-    let filePreviewDisplay = false
     let notifyLock = false
 
     let urlBoardPath = location.pathname.split('/')[1]
@@ -65,6 +79,11 @@ $(document).ready((e) => {
 
     $('#btnCloseImgPreviewModal').on('click', (e) => {
         $('#imgViewModal').modal('hide')
+    })
+    $("#imgViewModal").on("hidden.bs.modal", () => {
+        let el = $('#modalImgPreview')
+        el.children('video').trigger('pause')
+        el.children('audio').trigger('pause')
     })
 
     function generatePassword() {
@@ -159,7 +178,7 @@ $(document).ready((e) => {
     let messageTimeout = null
     function handleMessage(mode, message) {
         let error = false
-
+        
         switch(mode) {
             case smm.FATAL:
                 $('#layerContent').html(`
@@ -192,6 +211,7 @@ $(document).ready((e) => {
                 }
                 break
         }
+        $('#layerContent').css('opacity', 1)
     }
 
     function connectSocket(board, callback) {
@@ -205,28 +225,21 @@ $(document).ready((e) => {
         socket.off('connect').on('connect', () => {  
             updateSocketListeners()
             boardPath = board
-            connected = true
             scrollLock = false
             initLatencyStatus()
             initApp()
             if (callback) callback()
         })
         socket.off('connect_error').on('connect_error', err => {
-            $('#layerContent').css('opacity', 1)
             if (callback) callback(err)
             handleMessage(smm.FATAL, err)
-            connected = false
         })
         socket.off('connect_failed').on('connect_failed', err => {
-            $('#layerContent').css('opacity', 1)
             if (callback) callback(err)
             handleMessage(smm.FATAL, err)
-            connected = false
         })
         socket.on('disconnect', (err) => {
-            $('#layerContent').css('opacity', 1)
             if (callback) callback(err)
-            connected = false
         })
     }
     
@@ -267,9 +280,7 @@ $(document).ready((e) => {
                 $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
             }
 
-            listenerScroll = true
-            scrollLock = false
-            
+            listenerScroll = true            
             updateVisibility()
             updateListeners()
         })
@@ -396,19 +407,19 @@ $(document).ready((e) => {
     let scrollFetched = true
     let scrollAnchor = ''
 
-    $('#layerContent').on('scroll', (e) => {
+    $('#layerContent').on('mousewheel', (e) => {
         if (listenerScroll === false) return
         let el = $('#layerContent')
+
+        let maxScrollTop = el[0].scrollHeight - el.outerHeight();
+        if (maxScrollTop - el.scrollTop() > 30) scrollLock = true
+        else scrollLock = false 
 
         if (el.scrollTop() < 5 && scrollFetched) {
             emitSocketData(ltLayerScroll, { total : $('.reply-item').length })
             scrollFetched = false
             scrollAnchor = $('.reply-item')[0]
         }
-
-        let maxScrollTop = el[0].scrollHeight - el.outerHeight();
-        if (maxScrollTop - el.scrollTop() > 30) scrollLock = true
-        else scrollLock = false 
     })
 
     function updateBoardBtn() {
@@ -431,6 +442,8 @@ $(document).ready((e) => {
     }
 
     function initApp() {
+        $('#layerContent').css('opacity', 1)
+        
         if (isFinish === true) {
             isFinish = false
 
@@ -581,7 +594,6 @@ $(document).ready((e) => {
             })
 
             setInterval(() => {
-                console.log(scrollLock)
                 if (scrollLock === false) scrollDown()
             }, 300)
         }
