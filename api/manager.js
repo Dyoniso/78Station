@@ -167,13 +167,10 @@ io.of('board').on('connection', async(socket) => {
     }
 
     function formatReplyToHtml(replies) {
-        let html = ''
-        for (r of replies) {
-            html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { 
-                reply : r,
-                board : board
-            })
-        }
+        let html = pug.renderFile('./public/pug/templades/replyGroup.pug', { 
+            replies : replies,
+            board : board
+        })
         return html
     }
 

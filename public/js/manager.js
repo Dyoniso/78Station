@@ -129,7 +129,7 @@ $(document).ready((e) => {
         $('#btnRemoveFile').off('click').on('click', (e) => {
             $('#filePreview').html('')
             $('#dragFile').val('')
-            $('#replyContent').css('height', '40px')
+            $('#chatContent').css('height', '40px')
 
             filePreviewDisplay = false
         })
@@ -157,15 +157,15 @@ $(document).ready((e) => {
         dT.items.add(file)
         $('#dragFile')[0].files = dT.files
 
-        $('#replyContent').css('height', 'auto')
+        $('#chatContent').css('height', 'auto')
     }
 
     function clearInput() {
         $('#postSubject').val('')
-        $('#replyContent').val('')
+        $('#chatContent').val('')
         $('#replyUsername').val('')
         $('#dragFile').val('')
-        $('#replyContent').removeAttr('style')
+        $('#chatContent').removeAttr('style')
         $('#filePreview').empty()
     }
 
@@ -273,7 +273,7 @@ $(document).ready((e) => {
         socket.off(ltLayerBoard).on(ltLayerBoard, (obj) => {
             $('.error-container').remove()
             $('.empty-board-container').remove()
-            $('#layerContent').append(obj)
+            $('#replyContent').append(obj)
             
             notifyCount++
             if (notifyCount > 0 && notifyLock === false) {
@@ -289,30 +289,19 @@ $(document).ready((e) => {
                 $('#reply-'+i).remove()
             }
         })
-        socket.off(ltBoardBegin).on(ltBoardBegin, (obj) => {
-            if (obj && obj !== '') {
-                $('#layerContent').css('opacity', 1).html(obj)
+        socket.off(ltBoardBegin).on(ltBoardBegin, async(obj) => {
+            $('#layerContent').css('opacity', 1).html(obj)
+            $('#postSubject').show()
 
-                $('#postSubject').show()
-
-                hideDelBtn()
-                updateVisibility()
-                updateListeners()
-
-            } else {
-                $('#layerContent').html(`
-                    <div class="empty-board-container">
-                        <hr>
-                            <h4 class="text-center"> This board has no content. Be the first to post </h4>
-                        <hr>
-                    </div>
-                `)
-            }
+            hideDelBtn()
+            updateVisibility()
+            updateListeners()
         })
         socket.off(ltLayerScroll).on(ltLayerScroll, (obj) => {
             if (obj !== '') {
-                $('#layerContent').prepend(obj)
-                .scrollTop($(scrollAnchor).offset().top)
+                console.log($(scrollAnchor).offset().top)
+                $('#replyContent').prepend(obj)
+                $('#layerContent').scrollTop($(scrollAnchor).offset().top)
             }
             setTimeout(() => scrollFetched = true, 3000)
         })
@@ -407,6 +396,12 @@ $(document).ready((e) => {
     let scrollFetched = true
     let scrollAnchor = ''
 
+    function checkReplyContainerLeaked() {
+        let replyContainer = $('#replyContainer').first().position()
+        if (replyContainer && replyContainer.top < 0) $('#replyContainer').css('height', '100%')
+        else $('#replyContainer').removeAttr('style')
+    }
+
     $('#layerContent').on('mousewheel', (e) => {
         if (listenerScroll === false) return
         let el = $('#layerContent')
@@ -415,7 +410,7 @@ $(document).ready((e) => {
         if (maxScrollTop - el.scrollTop() > 30) scrollLock = true
         else scrollLock = false 
 
-        if (el.scrollTop() < 5 && scrollFetched) {
+        if (el.scrollTop() < 100 && scrollFetched) {
             emitSocketData(ltLayerScroll, { total : $('.reply-item').length })
             scrollFetched = false
             scrollAnchor = $('.reply-item')[0]
@@ -441,9 +436,12 @@ $(document).ready((e) => {
         defaultTitle = t
     }
 
+    let leakedInterval = null
+    let scrollItenval = null
+
     function initApp() {
         $('#layerContent').css('opacity', 1)
-        
+
         if (isFinish === true) {
             isFinish = false
 
@@ -455,7 +453,7 @@ $(document).ready((e) => {
             $('#replyUsername').off('keypress').on('keypress', (e) => {
                 if (e.keyCode === 13) e.preventDefault()
             })
-            $('#replyContent').off('keydown').on('keydown', (e) => {
+            $('#chatContent').off('keydown').on('keydown', (e) => {
                 let key = e.keyCode || e.charCode
 
                 if (shiftKey === false && key === 13) {
@@ -465,7 +463,7 @@ $(document).ready((e) => {
         
                     function sendPostData(file) {
                         let title = $('#postSubject').val()
-                        let content = $('#replyContent').val()
+                        let content = $('#chatContent').val()
 
                         if (!file && content.length <= 0) return
 
@@ -593,7 +591,14 @@ $(document).ready((e) => {
                 }
             })
 
-            setInterval(() => {
+            if (leakedInterval) clearInterval(leakedInterval)
+            if (scrollItenval) clearInterval(scrollItenval)
+
+            leakedInterval = setInterval(() => {
+                checkReplyContainerLeaked()
+            }, 1000)
+
+            scrollItenval = setInterval(() => {
                 if (scrollLock === false) scrollDown()
             }, 300)
         }
@@ -613,7 +618,7 @@ $(document).ready((e) => {
             let els = $('.settings-box')
             if (els.is(':visible')) els.slideToggle(100)
 
-            $('#replyContent').off('keypress')
+            $('#chatContent').off('keypress')
             $('#replyUsername').off('keypress')
             $('.logo').off('click')
             $(document).off('click').off('dragover').off('dragleave').off('drop')

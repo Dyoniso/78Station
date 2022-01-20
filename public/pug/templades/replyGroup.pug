@@ -1,0 +1,6 @@
+div(class="reply-container" id="replyContainer")
+    h4 Start of chat /#{board}/
+    hr
+    div(id="replyContent")
+        each reply in replies
+            include ./itemReply.pug

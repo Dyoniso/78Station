@@ -239,10 +239,6 @@ textarea.form-control {
     overflow: auto;
 }
 
-.reply-container {
-    clear: left;
-}
-
 .reply-item {
     border-left: 1px solid var(--color-secondary-dark);
     margin: 4px;
@@ -264,6 +260,9 @@ textarea.form-control {
 }
 
 .reply-container {
+    position: absolute;
+    bottom: 0;
+    clear: left;
     margin-top: 8px;
     padding: 8px;
 }
