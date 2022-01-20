@@ -34,5 +34,5 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
         input(type="checkbox" class="del-value mr-1 mt-1" value=`${reply.id}` data-type="reply")
 
     input(type="checkbox" class="del-value mr-1 mt-1" value=`${reply.id}` data-type="reply")
-    span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · !{`<span class="font-weight-bold">R. ${reply.id}</span>`} #{reply.self ? '(you)' : ''}
+    span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · !{`<span class="font-weight-bold get-reply" data-id="${reply.id}">R. ${reply.id}</span>`} #{reply.self ? '(you)' : ''}
     pre(class="reply-content") !{reply.content}

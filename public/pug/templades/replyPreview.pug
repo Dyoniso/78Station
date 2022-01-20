@@ -1,0 +1,37 @@
+div(class="reply-preview")
+    if (reply)
+        div(id="preview-reply-"+reply.id data-id=(reply.id))
+            if (reply.fileInfo && reply.fileInfo !== '')
+                - h = reply.fileInfo.dims ? reply.fileInfo.dims.height : 0
+                - w = reply.fileInfo.dims ? reply.fileInfo.dims.width : 0
+
+                - originUrl = `https://78Station.org/files/${board}/${reply.fileInfo.name}`
+
+                div(class="d-flex")
+                    - dims = ''
+                    - if (w > 0 && h > 0) dims = ` ${w}x${h}px`
+                    div(class="reply-file-info" id="fileInfo") File: !{`<a class="item-hover" href="/files/${board}/${reply.fileInfo.name}">${reply.fileInfo.name}</a>`} (#{reply.fileInfo.size}#{dims})
+
+                div(class="fix-img")
+                    div(class="d-flex justify-content-center")
+                        - fileUrl = `/files/${board}/${reply.fileInfo.name}`
+                        - type = reply.fileInfo.mime.split('/')[0]
+
+                        if (type === 'video')
+                            - thumbUrl = `/files/${board}/thumb/${reply.fileInfo.thumbName}`
+                            div(class="item-video")
+                                img(onClick=('openModal(this)') class="img-fit-sm" src=(thumbUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
+
+                        else if (type === 'audio')
+                            - audioUrl = `/pub/audio_icon.png`
+                            div(class="item-audio")
+                                img(onClick=('openModal(this)') class="img-fit-sm" src=(audioUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
+
+                        else
+                            div(class="item-image")
+                                img(onClick=('openModal(this)') class="img-fit-sm" src=(fileUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-size=(reply.fileInfo.size) date-width=(reply.fileInfo.width) data-mime=(reply.fileInfo.mime) data-height=(reply.fileInfo.height) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
+
+            span(class="color-secondary-dark") !{`<span class="font-weight-bold color-secondary">${reply.username}</span>`} · #{reply.date} · !{`<span class="font-weight-bold get-reply" data-id="${reply.id}">R. ${reply.id}</span>`}
+            pre(class="reply-content") !{reply.content}
+    else
+        div Reply not found in /#{board}/

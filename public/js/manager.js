@@ -281,7 +281,6 @@ $(document).ready((e) => {
             }
 
             listenerScroll = true            
-            updateVisibility()
             updateListeners()
         })
         socket.off(ltReplyDelete).on(ltReplyDelete, (obj) => {
@@ -294,14 +293,16 @@ $(document).ready((e) => {
             $('#postSubject').show()
 
             hideDelBtn()
-            updateVisibility()
             updateListeners()
+
+            let boardTitle = $('#boardTitle').val()
+            setTitle(`/${boardPath}/ ${boardTitle} - 78Station Express`)
         })
         socket.off(ltLayerScroll).on(ltLayerScroll, (obj) => {
             if (obj !== '') {
-                console.log($(scrollAnchor).offset().top)
                 $('#replyContent').prepend(obj)
                 $('#layerContent').scrollTop($(scrollAnchor).offset().top)
+                updateListeners()
             }
             setTimeout(() => scrollFetched = true, 3000)
         })
@@ -320,41 +321,76 @@ $(document).ready((e) => {
         })
     }
 
-    function updateVisibility() {
-        //DEF STORAGE ITEM
-        let storageItems = JSON.parse(localStorage.getItem(`hid-${boardPath}`))
-        if (!storageItems) {
-            localStorage.setItem(`hid-${boardPath}`, JSON.stringify([]))
-            storageItems = []
+    function quoteReply(id) {
+        if (!isNaN(id) && id > 0) {
+            let el = $('#chatContent')
+            el.val(el.val() + '>>'+ id + '\n')
+            el.css('height', (el.prop('scrollHeight') + 'px'))
         }
+    }
+
+    let tinBg = tinRef = null
+    function showReplyBox(board, replyId, e) {
+        let x = e.clientX + 5
+        let y = e.clientY + 5
+
+        let readed = false
+        let element = $(`#reply-${replyId}`)
+        tinBg = { el : element, bg : element.css('background') }
+
+        if (Object.keys(element).length > 0) {
+            let elTop = element.offset().top
+            let elBottom = element.offset().top + element.outerHeight()
+            let scBottom = $(window).scrollTop() + $(window).innerHeight()
+            let scTop = $(window).scrollTop()
         
-        for (r of storageItems) {
-            try {
-                $("#"+r).find('.btnVisibility').html(`<img src="/pub/btn_show.png" class="mb-1 pointer-effect"/>`)
-                $("#"+r).find('.wrap-content').hide()
-            } catch (err) {}
+            if ((scBottom > elTop) && (scTop < elBottom)) readed = true
         } 
+
+        if (readed === false) {
+            $(e.target).css('cursor', 'wait')
+            if (tinRef) clearTimeout(tinRef)
+            tinRef = setTimeout(() => {
+                fetch(`/${board}/reply/${replyId}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type' : 'text/html; charset=utf-8' },
+                })
+                .then(async(res) => {
+                    if (res && res.status === 200) {
+                        let data = await res.text()
+                        $('body').append(data)
+
+                        y = y - 80
+                        $('.reply-preview').css({'top' : y+'px', 'left' : x+'px'})
+                    }
+                    $(e.target).removeAttr('style')
+                })
+            }, 300)
+        } else {
+            element.css('background', 'var(--bgr-reply-preview )')
+        }
     }
 
     function updateListeners() {
         updateBoardBtn()
 
-        $('.btnVisibility').on('click', (e) => {
-            let t = $(e.target)
+        //Reply View Box
+        $('.quote-reply').off('click').on('click', (e) => {
+            let replyId = parseInt($(e.target).text().replace('>>', ''))
+            quoteReply(replyId)
+        })
+        $('.quote-reply').off('mouseenter mouseleave').hover(async(e) => {
+            let replyId = parseInt($(e.target).text().replace('>>', ''))
+            if (replyId && !isNaN(replyId)) showReplyBox(boardPath, replyId, e)
 
-            let storageItems = JSON.parse(localStorage.getItem(`hid-${boardPath}`))
-            if (el.is(':visible')) {
-                storageItems.push(atrId)
+        }, (e) => {
+            if (tinRef) clearTimeout(tinRef)
+            if (tinBg && tinBg.el) tinBg.el.css('background', tinBg.bg)
+            $('.reply-preview').remove()
+        })
 
-                t.replaceWith(`<img src="/pub/btn_show.png" class="mb-1 pointer-effect"/>`)
-                el.hide()
-            } else {
-                if (storageItems.includes(atrId)) storageItems = storageItems.filter((i) => i !== atrId)
-
-                t.replaceWith(`<img src="/pub/btn_hide.png" class="mb-1 pointer-effect"/>`)
-                el.show()
-            }
-            localStorage.setItem(`hid-${boardPath}`, JSON.stringify(storageItems))
+        $('.get-reply').off('click').on('click', (e) => {
+            quoteReply(parseInt($(e.target).data('id')))
         })
 
         $('.layer-content').find('input[type=checkbox]').off('change').on('change', (e) => {

@@ -35,13 +35,39 @@ app.get('/', (req, res) => {
 
     let boards = await db.query(`SELECT * FROM ${tables.BOARD}`)
     for (b of boards) {
-        let path = '/' + b.path
-        app.get(path, (req, res) => {
+        let board = b.path
+        app.get('/' + board, (req, res) => {
             return renderLayerView(req, res, b.path)
         })
-        logger.info(`> Board Express route added! [Route: ${path}]`)
+        app.get('/' + board + '/reply/:rid', async(req, res) => {
+            return await renderReplyPreview(req, res, board, req.params.rid)
+        })
+        logger.info(`> Board Express route added! [Route: /${board}]`)
     }
 })()
+
+async function renderReplyPreview(req, res, board, rid) {
+    rid = parseInt(rid)
+    if (isNaN(rid) || rid <= 0) return res.status(400).end('Invalid reply id')
+
+    let reply = await getReplyById(board, rid)
+    return res.render('./templades/replyPreview.pug', {
+        board : board,
+        reply : reply,
+    })
+}
+
+async function getReplyById(board, rid) {
+    let reply = null
+    try {
+        let q = await db.query(`SELECT * FROM ${schema.BOARD}.${board} WHERE id = $1`, [rid])
+        if (q[0]) reply = formatReply(q[0])
+
+    } catch (err) {
+        logger.error(`Error after get reply. Rid: ${rid} Board: ${board}`)
+    }
+    return reply
+}
 
 async function getBoardReplies(board, limit, uid, offSet) {
     if (!offSet || isNaN(offSet) || offSet < 0) offSet = 0
@@ -128,6 +154,18 @@ function translateContent(content, board) {
     return content
 }
 
+//Board Title
+async function getBoardTitle(board) {
+    let title = ''
+    try {
+        let q = await db.query(`SELECT name FROM ${tables.BOARD} WHERE path = $1`, [board])
+        if (q[0] && q[0].name) title = q[0].name
+    } catch (err) {
+        logger.error('Error after get board title', err)
+    }
+    return title
+}
+
 
 //Socket.io
 let pageSize = process.env.PAGE_SIZE | 20
@@ -166,10 +204,13 @@ io.of('board').on('connection', async(socket) => {
         })
     }
 
+    let boardTitle = await getBoardTitle(board)
+
     function formatReplyToHtml(replies) {
         let html = pug.renderFile('./public/pug/templades/replyGroup.pug', { 
             replies : replies,
-            board : board
+            board : board,
+            boardTitle : boardTitle,
         })
         return html
     }

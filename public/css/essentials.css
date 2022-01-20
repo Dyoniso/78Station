@@ -151,6 +151,15 @@ textarea.form-control {
     overflow: auto;
 }
 
+.img-fit-sm {
+    margin: 8px;
+    max-width: 180px;
+    max-height: 80px;
+    min-width: 50px;
+    min-height: 40px;
+    overflow: auto;
+}
+
 .img-fit:hover {
     transform: scale(1.02);
     cursor: pointer;
@@ -378,4 +387,21 @@ textarea.form-control {
 
 .item-video:hover::after {
     opacity: 10;
+}
+
+.get-reply {
+    cursor: pointer;
+}
+
+.get-reply:hover {
+    color : var(--color-accent)
+}
+
+.reply-preview {
+    background: var(--bgr-reply-preview);
+    z-index: 4;
+    padding: 8px;
+    box-shadow: 0 0 0.4em #949494;
+    border-left: 1px solid var(--color-secondary-dark);
+    position : fixed;
 }
