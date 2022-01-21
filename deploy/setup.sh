@@ -13,7 +13,7 @@ read answerDemp
 if [ "$answerDemp" == "y" ]; then
     echo "Installing dependencies (Node js, Postgresql, Nginx, ffmpeg)"
     curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-    apt-get install nodejs -y && apt install postgresql-10 -y && apt install ufw -y && apt install goaccess -y && apt install -y nginx && apt install -y ffmpeg && apt install -y npm
+    apt-get install nodejs -y && apt install postgresql -y && apt install ufw -y && apt install goaccess -y && apt install -y nginx && apt install -y ffmpeg && apt install -y npm
     echo "[OK] Dependencies installed!"
     echo ""
 
