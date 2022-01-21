@@ -44,7 +44,7 @@ if [ "$answerConfirm" == "y" ]; then
     echo "Node env updated!"
 
     mkdir ./temp
-    cp 78station.service ./temp/78station.service && cp nginx-proxy.conf ./temp/nginx-proxy.conf && cp node-env.conf ./temp/node-env.conf && cp pg_default.conf ./temp/pg_default.conf && cp pg_hba.conf ./temp/pg_hba.conf
+    cp 78station.service ./temp/78station.service && cp nginx-proxy.conf ./temp/nginx-proxy.conf && cp node-env.conf ./temp/node-env.conf
     cd ./temp
 
     mv node-env.conf .env

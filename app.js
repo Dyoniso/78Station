@@ -12,11 +12,6 @@ const HOSTNAME = process.env.HOSTNAME
 const DEFAULT_BOARDS = [ 
     { name      :       'International',   path : 'int' },
     { name      :       'Random',          path : 'b'   },
-    { name      :       'Debug',           path : 'd'   },
-    { name      :       'Radio',           path : 'r'   },
-    { name      :       'TV',              path : 'tv'   },
-    { name      :       'Anime',           path : 'a'   },
-    { name      :       'Hentai',          path : 'h'   },
 ]
 exports.DEFAULT_BOARDS = DEFAULT_BOARDS
 
