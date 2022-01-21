@@ -166,9 +166,14 @@ async function getBoardTitle(board) {
     return title
 }
 
+//ENV
+let boardSize = parseInt(process.env.BOARD_SIZE)
+let pageSize = parseInt(process.env.PAGE_SIZE)
+if (isNaN(boardSize) || boardSize <= 0) boardSize = 200
+if (isNaN(pageSize) || pageSize <= 0) boardSize = 20
+
 
 //Socket.io
-let pageSize = process.env.PAGE_SIZE | 20
 let boardInterval = process.env.BOARD_INTERVAL
 let waitList = []
 
@@ -395,29 +400,67 @@ io.of('board').on('connection', async(socket) => {
                 password,
             ])
             q = q[0]
+            
+            if (q) {
+                logger.ok(`Reply: ${q.id} added! Content: ${content}`)
 
-            let ctn = content
-            if (ctn.length > 120) ctn = ctn.substr(0, 120)
+                let ctn = content
+                if (ctn.length > 120) ctn = ctn.substr(0, 120)
 
-            logger.ok(`Reply: ${q.id} added! Content: ${content}`)
-                
-            let reply = formatReply({
-                id : q.id,
-                uid : uid,
-                username : username,
-                content : content,
-                file_info : q.file_info,
-                date : q.date,
-            }, uid)
+                let reply = formatReply({
+                    id : q.id,
+                    uid : uid,
+                    username : username,
+                    content : content,
+                    file_info : q.file_info,
+                    date : q.date,
+                }, uid)
 
-            let html = pug.renderFile('./public/pug/templades/itemReply.pug', { 
-                reply : reply,
-                board : board
-            })
-            for (s of io.of('/board').sockets.values()) {
-                if (s.board === board) {
-                    s.emit('channel layer board', html)
+                //Stack Size
+                try {
+                    let len = await db.query(`SELECT COUNT(*) FROM ${schema.BOARD}.${board}`)
+                    len = len[0]
+                    if (len) len = parseInt(len.count)
+                    if (isNaN(len) || len <= 0) len = 0
+
+                    if (len >= boardSize) {
+                        let items = await db.query(`
+                            DELETE FROM ${schema.BOARD}.${board} WHERE id IN (
+                                SELECT id FROM ${schema.BOARD}.${board} ORDER BY id ASC LIMIT 1
+                            ) RETURNING id,file_info;
+                        `)
+                            
+                        let replyUpdated = []
+                        for (q of items) {
+                            logger.info(`Reply: ${q.id} overflowed the maximum board size. Reply Removed!`)
+
+                            if (q && q.file_info && q.file_info !== '') {
+                                let fileInfo = JSON.parse(q.file_info)
+                                await fm.deleteFile(board, { name : fileInfo.name, thumbName : fileInfo.thumbName, })
+                            }
+                            replyUpdated.push(q.id)
+                        }
+
+                        for (s of io.of('/board').sockets.values()) {
+                            if (s.board === board) {
+                                s.emit('channel reply delete', replyUpdated)
+                            }
+                        }
+                    }
+    
+                } catch (err) {
+                    logger.error('Error after check stack size', err)
                 }
+
+                let html = pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                    reply : reply,
+                    board : board
+                })
+                for (s of io.of('/board').sockets.values()) {
+                    if (s.board === board) {
+                        s.emit('channel layer board', html)
+                    }
+                }    
             }
 
         } catch (err) {
