@@ -51,11 +51,6 @@ if [ "$answerConfirm" == "y" ]; then
     mv .env ../../../.env
 
     echo "Setting up postgresql database"
-    mv pg_default.conf postgresql.conf
-    mv postgresql.conf /etc/postgresql/10/main/postgresql.conf
-    mv pg_hba.conf /etc/postgresql/10/main/pg_hba.conf
-
-    systemctl enable postgresql
     sudo -i -u postgres psql -c "ALTER USER postgres PASSWORD '$CONFIG_MASTER_PASSWORD';"
     sudo -i -u postgres createdb 78Station
     ufw allow from any to any port 5432 proto tcp
