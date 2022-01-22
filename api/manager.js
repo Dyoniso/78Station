@@ -167,8 +167,10 @@ async function getBoardTitle(board) {
 }
 
 //ENV
+let adminPassword = process.env.ADMIN_PASSWORD
 let boardSize = parseInt(process.env.BOARD_SIZE)
 let pageSize = parseInt(process.env.PAGE_SIZE)
+if (!adminPassword) adminPassword = 'admin'
 if (isNaN(boardSize) || boardSize <= 0) boardSize = 200
 if (isNaN(pageSize) || pageSize <= 0) boardSize = 20
 
@@ -249,18 +251,22 @@ io.of('board').on('connection', async(socket) => {
         logger.info('Starting del reply sync from items: '+JSON.stringify(replies))
         for (r of replies) {
             try {
-                let q = await db.query(`DELETE FROM ${schema.BOARD}.${board} WHERE id = $1 AND password = $2 RETURNING file_info,id`, [r.id, password])
+                let passQuery = ' AND password = $2'
+                if (password === adminPassword) passQuery = ''
+                let q = await db.query(`DELETE FROM ${schema.BOARD}.${board} WHERE id = $1${passQuery} RETURNING file_info,id`, [r.id, password])
                 q = q[0]
 
-                if (q && q.file_info && q.file_info !== '') {
-                    let fileInfo = JSON.parse(q.file_info)
-                    await fm.deleteFile(board, { name : fileInfo.name, thumbName : fileInfo.thumbName, })
-                }
-
-                if (q && q.id && q.id > 0) {
-                    logger.ok(`* Reply Deleted! ID: ${t.id}`)
-                    delCountReplies++
-                    replyUpdated.push(q.id)
+                if (q) {
+                    if (q.file_info && q.file_info !== '') {
+                        let fileInfo = JSON.parse(q.file_info)
+                        await fm.deleteFile(board, { name : fileInfo.name, thumbName : fileInfo.thumbName, })
+                    }
+    
+                    if (q.id && q.id > 0) {
+                        logger.ok(`* Reply Deleted! ID: ${t.id}`)
+                        delCountReplies++
+                        replyUpdated.push(q.id)
+                    }
                 }
 
             } catch (err) {
@@ -274,6 +280,10 @@ io.of('board').on('connection', async(socket) => {
                     s.emit('channel reply delete', replyUpdated)
                 }
             }
+            throwMessage(smm.SUCCESS, 'Reply successful deleted!')
+            
+        } else {
+            throwMessage(smm.ERROR, 'Invalid Password')
         }
     })
 

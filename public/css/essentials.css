@@ -350,6 +350,12 @@ textarea.form-control {
 }
 
 @media only screen and (max-width: 800px) {
+    .file-info {
+        display: none;
+    }
+    .boardTitle {
+        display: none;
+    }
     .flat-board-preview {
         display: flex;
     }

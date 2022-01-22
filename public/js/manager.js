@@ -206,9 +206,7 @@ $(document).ready((e) => {
                 if (error === true) el.css({'color' : 'red'})
                 else el.css({'color' : 'green'})
                 if (!el.is(':visible')) el.slideToggle(100)
-                if (error === false) {
-                    messageTimeout = setTimeout(() => el.slideToggle(100), 5000)
-                }
+                messageTimeout = setTimeout(() => el.slideToggle(100), 5000)
                 break
         }
         $('#layerContent').css('opacity', 1)
@@ -268,9 +266,11 @@ $(document).ready((e) => {
         $('.latency-status').text('')
     }
 
+    let tinScrollListener = null
     let notifyCount = 0
     function updateSocketListeners() {
         socket.off(ltLayerBoard).on(ltLayerBoard, (obj) => {
+            listenerScroll = false
             $('.error-container').remove()
             $('.empty-board-container').remove()
             $('#replyContent').append(obj)
@@ -278,9 +278,10 @@ $(document).ready((e) => {
             notifyCount++
             if (notifyCount > 0 && notifyLock === false) {
                 $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
-            }
+            }            
 
-            listenerScroll = true            
+            if (tinScrollListener) clearTimeout(tinScrollListener)
+            setTimeout(() => listenerScroll = true, 500)
             updateListeners()
         })
         socket.off(ltReplyDelete).on(ltReplyDelete, (obj) => {
@@ -438,7 +439,7 @@ $(document).ready((e) => {
         else $('#replyContainer').removeAttr('style')
     }
 
-    $('#layerContent').on('mousewheel', (e) => {
+    $('#layerContent').on('scroll', (e) => {
         if (listenerScroll === false) return
         let el = $('#layerContent')
 
@@ -515,7 +516,6 @@ $(document).ready((e) => {
         
                         let postType = 'channel add reply'
 
-                        listenerScroll = false
                         scrollLock = false
                         filePreviewDisplay = false
                         notifyLock = true
@@ -632,7 +632,7 @@ $(document).ready((e) => {
 
             leakedInterval = setInterval(() => {
                 checkReplyContainerLeaked()
-            }, 1000)
+            }, 800)
 
             scrollItenval = setInterval(() => {
                 if (scrollLock === false) scrollDown()
