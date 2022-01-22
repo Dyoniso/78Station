@@ -462,12 +462,19 @@ io.of('board').on('connection', async(socket) => {
                     logger.error('Error after check stack size', err)
                 }
 
+                reply.self = false
                 let html = pug.renderFile('./public/pug/templades/itemReply.pug', { 
                     reply : reply,
                     board : board
                 })
                 for (s of io.of('/board').sockets.values()) {
-                    if (s.board === board) {
+                    if (s.board === board && s.uid === uid) {
+                        reply.self = true
+                        s.emit('channel layer board', pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                            reply : reply,
+                            board : board
+                        }))
+                    } else if (board === s.board) {
                         s.emit('channel layer board', html)
                     }
                 }    
