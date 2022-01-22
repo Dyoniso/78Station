@@ -24,7 +24,7 @@ html
                         div(class="font-weight-bold") 78Express  
 
                         each b in boards
-                            div(class="board-item d-flex align-items-center" id="boardItem-"+b.path)
+                            div(class="board-item d-flex align-items-center boardItem-"+b.path)
                                 div(class="pulse")
                                 div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ !{`<span data-path=${b.path} class="boardTitle">${b.name}</span>`}
 
