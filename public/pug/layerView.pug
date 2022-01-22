@@ -15,7 +15,7 @@ html
                         div(class="board-item d-flex align-items-center boardItem-"+b.path)
                             div(class="pulse")
                             div(class="latency-status")
-                            div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ !{`<span class="boardTitle">${b.name}</span>`}
+                            div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ !{`<span data-path=${b.path} class="boardTitle">${b.name}</span>`}
 
                 main(class="layer-container")
                     input(type="hidden" id="boardPath" value=(path))
@@ -26,7 +26,7 @@ html
                         each b in boards
                             div(class="board-item d-flex align-items-center" id="boardItem-"+b.path)
                                 div(class="pulse")
-                                div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ !{`<span class="boardTitle">${b.name}</span>`}
+                                div(class="item-hover boardBtn" data-path=(b.path)) /#{b.path}/ !{`<span data-path=${b.path} class="boardTitle">${b.name}</span>`}
 
                     div(class="layer-content" id="layerContent")
                         div(class="p-3 text-center")

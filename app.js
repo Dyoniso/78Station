@@ -3,16 +3,19 @@ require('dotenv').config()
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
+const fs = require('fs')
 
 const app = express()
 
 const PORT = process.env.PORT || process.env.SERVER_PORT
 const HOSTNAME = process.env.HOSTNAME
 
-const DEFAULT_BOARDS = [ 
-    { name      :       'International',   path : 'int' },
-    { name      :       'Random',          path : 'b'   },
-]
+let DEFAULT_BOARDS = []
+try {
+    if (fs.existsSync('./boards.json')) DEFAULT_BOARDS = JSON.parse(fs.readFileSync('./boards.json'))
+} catch (err) {
+    logger.fatal('Error after get boards file. Check the file syntax')
+}
 exports.DEFAULT_BOARDS = DEFAULT_BOARDS
 
 const Logger = require('./api/logger')
