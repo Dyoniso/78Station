@@ -247,6 +247,7 @@ $(document).ready((e) => {
     let ltLayerScroll = 'channel layer board scroll'
     let ltMessage = 'channel status message'
     let ltReplyDelete = 'channel reply delete'
+    let ltReplyMentions = 'channel reply mentions'
 
     let pingInterval = null
     function initLatencyStatus() {
@@ -269,6 +270,18 @@ $(document).ready((e) => {
     let tinScrollListener = null
     let notifyCount = 0
     function updateSocketListeners() {
+        socket.off(ltReplyMentions).on(ltReplyMentions, (obj) => {
+            let c = 0
+            for (m of obj) {
+                $('#replyMention-'+m.id).append(`
+                    <span class="pl-1 quote-reply" title="Click to reply to mention">&gt;&gt;${m.quoted}</span>
+                    ${c++ > 4 ? '<br>' : ''}
+                `)
+                let el = $('#reply-'+m.id)
+                el.css('background', 'var(--bgr-reply-preview)')
+                setTimeout(() => el.removeAttr('style'), 650)
+            }
+        })
         socket.off(ltLayerBoard).on(ltLayerBoard, (obj) => {
             listenerScroll = false
             $('.error-container').remove()
@@ -282,6 +295,7 @@ $(document).ready((e) => {
 
             if (tinScrollListener) clearTimeout(tinScrollListener)
             setTimeout(() => listenerScroll = true, 500)
+            setTimeout(() => scrollFetched = true, 1500)
             updateListeners()
         })
         socket.off(ltReplyDelete).on(ltReplyDelete, (obj) => {
@@ -298,6 +312,8 @@ $(document).ready((e) => {
 
             let boardTitle = $('#boardTitle').val()
             setTitle(`/${boardPath}/ ${boardTitle} - 78Station Express`)
+
+            setTimeout(() => scrollFetched = true, 1500)
         })
         socket.off(ltLayerScroll).on(ltLayerScroll, (obj) => {
             if (obj !== '') {
@@ -305,7 +321,7 @@ $(document).ready((e) => {
                 $('#layerContent').scrollTop($(scrollAnchor).offset().top)
                 updateListeners()
             }
-            setTimeout(() => scrollFetched = true, 3000)
+            setTimeout(() => scrollFetched = true, 1500)
         })
         socket.off(ltMessage).on(ltMessage, (obj) => {
             handleMessage(obj.mode, obj.message)
@@ -430,7 +446,7 @@ $(document).ready((e) => {
 
     let listenerScroll = true
     let scrollLock = false
-    let scrollFetched = true
+    let scrollFetched = false
     let scrollAnchor = ''
 
     function checkReplyContainerLeaked() {
@@ -447,10 +463,10 @@ $(document).ready((e) => {
         if (maxScrollTop - el.scrollTop() > 30) scrollLock = true
         else scrollLock = false 
 
-        if (el.scrollTop() < 100 && scrollFetched) {
-            emitSocketData(ltLayerScroll, { total : $('.reply-item').length })
+        if (el.scrollTop() < 800 && scrollFetched) {
             scrollFetched = false
             scrollAnchor = $('.reply-item')[0]
+            emitSocketData(ltLayerScroll, { total : $('.reply-item').length })
         }
     })
 

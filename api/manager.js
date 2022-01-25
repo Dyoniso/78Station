@@ -99,6 +99,11 @@ function formatReply(reply, uid) {
         rawDate : reply.date,
         date : utils.formatTimestamp(reply.date),
     }
+    try {
+        rpy.mentions = JSON.parse(reply.mentions)
+    } catch (err) {
+        rpy.mentions = []
+    }
     if (reply.file_info && reply.file_info !== '') {
         let thumbName = reply.file_info.thumbName
         rpy.fileInfo = {
@@ -139,6 +144,16 @@ function translateContent(content, board) {
     let rexQuoteReply = new RegExp(/^&gt;&gt;(\d+)/mg)
     let rexQuoteBoard = new RegExp(/^&gt;&gt;&gt;\/([a-zA-Z]+)\//mg)
 
+    let quotedReplies = []
+    let rexQuotedReplies = content.match(rexQuoteReply)
+    if (rexQuotedReplies) {
+        for (r of rexQuotedReplies) {
+            try {
+                quotedReplies.push(parseInt(r.replace(/&gt;&gt;/, '')))
+            } catch (err) {}
+        }
+    }
+
     content = content
     .replace(rexhttp, '<a href="$1">$1</a>')
     .replace(rexSpoiler, '<span class="spoiler-content">$1</span>')
@@ -151,7 +166,8 @@ function translateContent(content, board) {
     .replace(rexStroke, '<span class="td-stroke">$1</span>')
     .replace(rexUnderline, '<span class="td-underline">$1</span>')
     .replace(rexThrough, '<span class="td-through">$1</span>')
-    return content
+
+    return { content : content, quoted : quotedReplies } 
 }
 
 //Board Title
@@ -383,8 +399,10 @@ io.of('board').on('connection', async(socket) => {
         if (content.length > 8000) return throwMessage(smm.ERROR, 'The content of your post must be less than 8000 characters.')
         
         username = utils.htmlEnc(username)
-        content = translateContent(utils.htmlEnc(content), board)
-
+        let converted = translateContent(utils.htmlEnc(content), board)
+        content = converted.content
+        
+        let quoted = converted.quoted
         let fileInfo = ''
         let base64 = ''
         if (file !== null) {
@@ -395,6 +413,28 @@ io.of('board').on('connection', async(socket) => {
 
             base64 = fileInfo.base64
             delete fileInfo.base64
+        }
+
+        async function mentionReplyById(id, rid) {
+            let max = 10
+
+            try {
+                let sequence = await db.query(`SELECT mentions FROM ${schema.BOARD}.${board} WHERE id = $1`, [ id ])
+                sequence = sequence[0]
+                if (sequence) {
+                    try {
+                        sequence = JSON.parse(sequence.mentions)
+                        sequence.push(rid)
+                        sequence.sort((x, y) => y - x)
+                        if (sequence.length >= max) sequence.pop()
+                        await db.query(`UPDATE ${schema.BOARD}.${board} SET mentions = $2 WHERE id = $1`, [ id, JSON.stringify(sequence) ])
+                        
+                    } catch (err) {}
+                }
+    
+            } catch (err) {
+                logger.error('Error after quote reply. Rid: '+rid)
+            }
         }
 
         try {
@@ -412,6 +452,17 @@ io.of('board').on('connection', async(socket) => {
             q = q[0]
             
             if (q) {
+                let mentionBundle = []
+                for (r of quoted) {
+                    mentionReplyById(r, q.id)
+                    mentionBundle.push({ id : r, quoted : q.id })
+                }
+                for (s of io.of('/board').sockets.values()) {
+                    if (s.board === board) {
+                        s.emit('channel reply mentions', mentionBundle)
+                    }
+                }
+
                 logger.ok(`Reply: ${q.id} added! Content: ${content}`)
 
                 let ctn = content
@@ -424,6 +475,7 @@ io.of('board').on('connection', async(socket) => {
                     content : content,
                     file_info : q.file_info,
                     date : q.date,
+                    mentions : [],
                 }, uid)
 
                 //Stack Size

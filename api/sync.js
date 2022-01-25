@@ -69,6 +69,7 @@ exports.init = async(callback) => {
                         content text DEFAULT(''),
                         file_info text DEFAULT(''),
                         password varchar(200) DEFAULT(''),
+                        mentions text DEFAULT('[]'),
                         date timestamp DEFAULT current_timestamp
                     );
                 `)

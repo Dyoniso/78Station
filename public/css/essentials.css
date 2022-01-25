@@ -411,3 +411,13 @@ textarea.form-control {
     border-left: 1px solid var(--color-secondary-dark);
     position : fixed;
 }
+
+.mentioned {
+    margin-left: 12px;
+    margin-right: 12px;
+    font-size: 12px;
+}
+
+.mentioned span {
+    cursor: pointer;
+}
