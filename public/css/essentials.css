@@ -83,6 +83,10 @@ pre {
     color: #d1d1d1!important;
 }
 
+.form-control:disabled {
+    background: var(--bgr-secondary-light);
+}
+
 .drag-file-preview {
   outline : dashed #9e5dff;;
   outline-offset : -10px;
@@ -420,4 +424,17 @@ textarea.form-control {
 
 .mentioned span {
     cursor: pointer;
+}
+
+.progress-bar {
+    height: 1px;
+    background: linear-gradient(to left, #ff0000, #ffa600, #fff500, #06ff00, #00c9ff, #2300ff, #ff00fa, #ff0000);
+    background-size: 200% auto;
+    animation: heading 1s linear infinite;
+}
+
+@keyframes heading {
+    to {
+        background-position:200% center;
+    }
 }

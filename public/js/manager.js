@@ -48,6 +48,7 @@ $(document).ready((e) => {
     let settingsLock = false
     let delObj = []
     let notifyLock = false
+    let inputLocked = false
 
     let urlBoardPath = location.pathname.split('/')[1]
 
@@ -286,12 +287,16 @@ $(document).ready((e) => {
             listenerScroll = false
             $('.error-container').remove()
             $('.empty-board-container').remove()
-            $('#replyContent').append(obj)
+            $('#replyContent').append(obj.data)
             
-            notifyCount++
-            if (notifyCount > 0 && notifyLock === false) {
-                $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
-            }            
+            if (!obj.self) {
+                notifyCount++
+                if (notifyCount > 0 && notifyLock === false) {
+                    $('#pageTitle').text(`(${notifyCount}) ` + defaultTitle)
+                }            
+            } else {
+                unlockInput()
+            }
 
             if (tinScrollListener) clearTimeout(tinScrollListener)
             setTimeout(() => listenerScroll = true, 500)
@@ -492,6 +497,22 @@ $(document).ready((e) => {
     let leakedInterval = null
     let scrollItenval = null
 
+    function unlockInput() {
+        inputLocked = false
+        $('.progress-bar').hide()
+        $('#chatContent').prop('placeholder', 'Type anything..')
+        .prop('disabled', inputLocked)
+        $('#dragFile').prop('disabled', inputLocked)
+    }
+
+    function lockInput() {
+        inputLocked = true
+        $('.progress-bar').show()
+        $('#chatContent').prop('placeholder', 'Processing your reply...')
+        .prop('disabled', inputLocked)
+        $('#dragFile').prop('disabled', inputLocked)
+    }
+
     function initApp() {
         $('#layerContent').css('opacity', 1)
 
@@ -515,6 +536,8 @@ $(document).ready((e) => {
                     let file = $('#dragFile').prop('files')[0]
         
                     function sendPostData(file) {
+                        if (inputLocked) return
+
                         let title = $('#postSubject').val()
                         let content = $('#chatContent').val()
 
@@ -538,6 +561,7 @@ $(document).ready((e) => {
 
                         emitSocketData(postType, obj) 
                         clearInput()
+                        lockInput()
                     }
         
                     if (file) {
@@ -577,6 +601,7 @@ $(document).ready((e) => {
             })
 
             $('#settingsBtn').off('click').on('click', (e) => {
+                if (inputLocked) return
                 let el = $('.settings-box')
                 el.slideToggle(100)
                 $('#settingsUsername').val(defaultName)

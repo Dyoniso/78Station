@@ -367,7 +367,7 @@ io.of('board').on('connection', async(socket) => {
             dims = sizeOf(base64)
 
         } catch (err) {
-            logger.error(`Error after get base64 dims.`)
+            logger.info(`Error after get base64 dims. Mime type not allowed!`)
         }
         if (!dims.width || dims.width < 0 || isNaN(dims.width)) dims.width = 0
         if (!dims.width || dims.height < 0 || isNaN(dims.height)) dims.height = 0
@@ -522,10 +522,13 @@ io.of('board').on('connection', async(socket) => {
                 for (s of io.of('/board').sockets.values()) {
                     if (s.board === board && s.uid === uid) {
                         reply.self = true
-                        s.emit('channel layer board', pug.renderFile('./public/pug/templades/itemReply.pug', { 
-                            reply : reply,
-                            board : board
-                        }))
+                        s.emit('channel layer board', {
+                            self : reply.self,
+                            data : pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                                reply : reply,
+                                board : board
+                            })
+                        })
                     } else if (board === s.board) {
                         s.emit('channel layer board', html)
                     }
