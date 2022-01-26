@@ -3,7 +3,7 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
         - h = reply.fileInfo.dims ? reply.fileInfo.dims.height : 0
         - w = reply.fileInfo.dims ? reply.fileInfo.dims.width : 0
 
-        - originUrl = `https://78Station.org/files/${board}/${reply.fileInfo.name}`
+        - originUrl = `${siteUrl}/files/${board}/${reply.fileInfo.name}`
 
         div(class="d-flex")
             - dims = ''

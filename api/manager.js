@@ -183,9 +183,11 @@ async function getBoardTitle(board) {
 }
 
 //ENV
+let siteUrl = process.env.SITE_URL
 let adminPassword = process.env.ADMIN_PASSWORD
 let boardSize = parseInt(process.env.BOARD_SIZE)
 let pageSize = parseInt(process.env.PAGE_SIZE)
+if (!siteUrl) siteUrl = 'localhost'
 if (!adminPassword) adminPassword = 'admin'
 if (isNaN(boardSize) || boardSize <= 0) boardSize = 200
 if (isNaN(pageSize) || pageSize <= 0) boardSize = 20
@@ -234,6 +236,7 @@ io.of('board').on('connection', async(socket) => {
             replies : replies,
             board : board,
             boardTitle : boardTitle,
+            siteUrl : siteUrl,
         })
         return html
     }
@@ -311,7 +314,7 @@ io.of('board').on('connection', async(socket) => {
             let html = ''
             for (r of replies) {
                 html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { 
-                    reply : r, board : board
+                    reply : r, board : board, siteUrl : siteUrl, 
                 })
             }
             socket.emit('channel layer board scroll', html)
