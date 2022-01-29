@@ -64,13 +64,11 @@ pre {
 }
 
 .settings-btn {
-    background: url('/pub/settings_button.svg');
     width: 22px;
     height: 22px;
 }
 
 .drag-btn {
-    background: url('/pub/plus_button.svg');
     width: 22px;
     height: 22px;
 }

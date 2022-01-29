@@ -3,7 +3,10 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
         - h = reply.fileInfo.dims ? reply.fileInfo.dims.height : 0
         - w = reply.fileInfo.dims ? reply.fileInfo.dims.width : 0
 
-        - originUrl = `${siteUrl}/files/${board}/${reply.fileInfo.name}`
+        if (bdgePath && bdgePath.length > 0)
+            - originUrl = `${siteUrl}/${bdgePath}/files/${board}/${reply.fileInfo.name}`
+        else 
+            - originUrl = `${siteUrl}/files/${board}/${reply.fileInfo.name}`
 
         div(class="d-flex")
             - dims = ''
@@ -12,22 +15,22 @@ div(class=`reply-item ${reply.self ? 'reply-box-theme-self' : 'reply-box-theme'}
 
         div(class="fix-img")
             div(class="d-flex justify-content-center")
-                - fileUrl = `/files/${board}/${reply.fileInfo.name}`
+                - fileUrl = `${bdgePath}/files/${board}/${reply.fileInfo.name}`
                 - type = reply.fileInfo.mime.split('/')[0]
 
                 if (type === 'video')
-                    - thumbUrl = `/files/${board}/thumb/${reply.fileInfo.thumbName}`
+                    - thumbUrl = `${bdgePath}/files/${board}/thumb/${reply.fileInfo.thumbName}`
                     div(class="item-video")
-                        img(onClick=('openModal(this)') class="img-fit" src=(thumbUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
+                        img(onClick=('openModal(this)') class="img-fit" src=(thumbUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror=`this.src='${bdgePath}/pub/404.jpg'`) 
 
                 else if (type === 'audio')
-                    - audioUrl = `/pub/audio_icon.png`
+                    - audioUrl = `${bdgePath}/pub/audio_icon.png`
                     div(class="item-audio")
-                        img(onClick=('openModal(this)') class="img-fit" src=(audioUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
+                        img(onClick=('openModal(this)') class="img-fit" src=(audioUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-mime=(reply.fileInfo.mime) data-size=(reply.fileInfo.size) data-id=(reply.id) onerror=`this.src='${bdgePath}/pub/404.jpg'`) 
 
                 else
                     div(class="item-image")
-                        img(onClick=('openModal(this)') class="img-fit" src=(fileUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-size=(reply.fileInfo.size) date-width=(reply.fileInfo.width) data-mime=(reply.fileInfo.mime) data-height=(reply.fileInfo.height) data-id=(reply.id) onerror="this.src='/pub/404.jpg'") 
+                        img(onClick=('openModal(this)') class="img-fit" src=(fileUrl) data-href=(fileUrl) data-date=(reply.date) data-filename=(reply.fileInfo.name) data-size=(reply.fileInfo.size) date-width=(reply.fileInfo.width) data-mime=(reply.fileInfo.mime) data-height=(reply.fileInfo.height) data-id=(reply.id) onerror=`this.src='${bdgePath}/pub/404.jpg'`) 
 
     
     //-if (!reply.fileInfo || reply.fileInfo === '')

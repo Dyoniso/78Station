@@ -1,6 +1,13 @@
+const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
+if (MODE_BRIDGE) {
+    app = require('../bridge').app
+    io = require('../bridge').io
+} else {
+    app = require('../app').app
+    io = require('../app').io
+} 
+
 require('dotenv').config()
-const app = require('../app').app
-const io = require('../app').io
 const Logger = require('./logger')
 const logger = new Logger('app')
 const db = require('./database')
@@ -22,11 +29,17 @@ const smm = {
 
 const allowedFormats = ['jpeg','jpg','gif','bmp','png','m4v','avi','mpg','mp4','webm','webp','mp3', 'mpeg', 'ogg']
 
-app.all('*', middle.uidGen, async(req, res, next) => {
+let bdgePath = ''
+if (MODE_BRIDGE) {
+    let route = require('../bridge').P.route
+    if (route && route.length > 0) bdgePath = '/' + route 
+}
+
+app.all(bdgePath + '/*', middle.uidGen, async(req, res, next) => {
     return next()      
 })
 
-app.get('/', (req, res) => {
+app.get(bdgePath + '/', (req, res) => {
     return renderLayerView(req, res)
 })
 
@@ -36,10 +49,10 @@ app.get('/', (req, res) => {
     let boards = await db.query(`SELECT * FROM ${tables.BOARD}`)
     for (b of boards) {
         let board = b.path
-        app.get('/' + board, (req, res) => {
-            return renderLayerView(req, res, b.path)
+        app.get(bdgePath + '/' + board, (req, res) => {
+            return renderLayerView(req, res, board)
         })
-        app.get('/' + board + '/reply/:rid', async(req, res) => {
+        app.get(bdgePath + '/' + board + '/reply/:rid', async(req, res) => {
             return await renderReplyPreview(req, res, board, req.params.rid)
         })
         logger.info(`> Board Express route added! [Route: /${board}]`)
@@ -51,9 +64,10 @@ async function renderReplyPreview(req, res, board, rid) {
     if (isNaN(rid) || rid <= 0) return res.status(400).end('Invalid reply id')
 
     let reply = await getReplyById(board, rid)
-    return res.render('./templades/replyPreview.pug', {
+    return utils.renderHtml(res, '/templades/replyPreview.pug', {
         board : board,
         reply : reply,
+        bdgePath : bdgePath,
     })
 }
 
@@ -232,9 +246,12 @@ io.of('board').on('connection', async(socket) => {
     let boardTitle = await getBoardTitle(board)
 
     function formatReplyToHtml(replies) {
-        let html = pug.renderFile('./public/pug/templades/replyGroup.pug', { 
+        let access = '.'
+        if (MODE_BRIDGE) access = require('../bridge').path
+        let html = pug.renderFile(`${access}/public/pug/templades/replyGroup.pug`, { 
             replies : replies,
             board : board,
+            bdgePath : bdgePath,
             boardTitle : boardTitle,
             siteUrl : siteUrl,
         })
@@ -312,9 +329,12 @@ io.of('board').on('connection', async(socket) => {
         if (total > 0) {
             let replies = await getBoardReplies(board, pageSize, uid, total)
             let html = ''
+
+            let access = '.'
+            if (MODE_BRIDGE) access = require('../bridge').path
             for (r of replies) {
-                html = html + pug.renderFile('./public/pug/templades/itemReply.pug', { 
-                    reply : r, board : board, siteUrl : siteUrl, 
+                html = html + pug.renderFile(`${access}/public/pug/templades/itemReply.pug`, { 
+                    reply : r, board : board, siteUrl : siteUrl, bdgePath : bdgePath
                 })
             }
             socket.emit('channel layer board scroll', html)
@@ -518,18 +538,24 @@ io.of('board').on('connection', async(socket) => {
                 }
 
                 reply.self = false
-                let html = pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                let access = '.'
+                if (MODE_BRIDGE) access = require('../bridge').path
+                let html = pug.renderFile(`${access}/public/pug/templades/itemReply.pug`, { 
                     reply : reply,
-                    board : board
+                    board : board,
+                    bdgePath : bdgePath
                 })
                 for (s of io.of('/board').sockets.values()) {
                     if (s.board === board && s.uid === uid) {
                         reply.self = true
+                        let access = '.'
+                        if (MODE_BRIDGE) access = require('../bridge').path
                         s.emit('channel layer board', {
                             self : reply.self,
-                            data : pug.renderFile('./public/pug/templades/itemReply.pug', { 
+                            data : pug.renderFile(`${access}/public/pug/templades/itemReply.pug`, { 
                                 reply : reply,
-                                board : board
+                                board : board,
+                                bdgePath : bdgePath,
                             })
                         })
                     } else if (board === s.board) {
@@ -564,5 +590,5 @@ async function getBoardsList() {
 async function renderLayerView(req, res, path) {
     if (!path) path = ''
     const boards = await getBoardsList()
-    return res.render('./layerView.pug', { boards : boards, path : path })
+    return utils.renderHtml(res, '/layerView.pug', { boards : boards, path : path, bdgePath : bdgePath })
 }

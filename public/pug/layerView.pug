@@ -7,6 +7,9 @@ html
         include ./templades/imgPreview.pug
 
         div(class="container-fluid")
+            input(type="hidden" id="boardPath" value=(path))
+            input(type="hidden" id="bdgePath" value=(bdgePath))
+
             div(class="d-flex align-items-stretch")
                 nav(class="nav-bar")
                     h5(class="logo") 78Express Boards
@@ -50,14 +53,14 @@ html
                         form(class="chat-form" action="" method="")
                             div(class="d-flex")
                                 label(class="chat-file" for="dragFile")
-                                    div(class="drag-btn")
+                                    div(class="drag-btn" style=`background: url('${bdgePath}/pub/plus_button.svg');`)
 
                                 div(class="file-preview" id="filePreview")
                                 input(type="file" id="dragFile" class="chat-file" style="display:none")        
                                 textarea(type="text" placeholder="Type anything.." class="form-control" id="chatContent")
 
                                 div(class="chat-file")
-                                    div(class="settings-btn" id="settingsBtn")
+                                    div(class="settings-btn" id="settingsBtn" style=`background: url('${bdgePath}/pub/settings_button.svg');`)
 
         script(src="/socket.io/socket.io.js")
-        script(src="/pub/manager.js")                              
+        script(src=(bdgePath + "/pub/manager.js"))

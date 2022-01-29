@@ -5,13 +5,20 @@ const fs = require('fs')
 const db = require('./database')
 const utils = require('./utils')
 const ffmpeg = require('fluent-ffmpeg')
+const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
 
 const dirName = { 
     files : 'files',
 }
 
 exports.dirName = dirName
-const filesPath = './public/files/'
+let filesPath = '/public/files/'
+
+let bdgePath = ''
+if (MODE_BRIDGE) {
+    bdgePath = require('../bridge').path
+    filesPath = bdgePath + filesPath
+} else filesPath = '.' + bdgePath + filesPath
 exports.filesPath = filesPath
 
 exports.updateFileSystem = async(table) => {

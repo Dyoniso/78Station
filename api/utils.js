@@ -1,3 +1,6 @@
+const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
+const pug = require('pug')
+
 exports.formatSize = (bytes, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -42,4 +45,13 @@ exports.generateHash = (length) => {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result
+}
+
+let bdgePath = ''
+if (MODE_BRIDGE) bdgePath = require('../bridge').path
+exports.renderHtml = (res, path, o) => {
+    let access = './public/pug'
+    if (MODE_BRIDGE) access = bdgePath + '/public/pug'
+    let html = o ? pug.renderFile(access + path, o) : pug.renderFile(access + path)
+    return res.status(200).send(html).end()
 }

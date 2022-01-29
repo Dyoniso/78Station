@@ -2,7 +2,9 @@ const db = require('./database')
 const Logger = require('./logger')
 const logger = new Logger('app')
 const fm = require('./fileManager')
-const DEFAULT_BOARDS = require('../app').DEFAULT_BOARDS
+const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
+if (MODE_BRIDGE) DEFAULT_BOARDS = require('../bridge').DEFAULT_BOARDS
+else DEFAULT_BOARDS = require('../app').DEFAULT_BOARDS
 
 const tables = {
     BOARD : 'board'

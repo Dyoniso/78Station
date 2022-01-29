@@ -34,7 +34,6 @@ function openModal(e) {
     else $('#modalImgPreview').html(`
         <img class="modal-img-preview" src="${href}" />
     `)
-
     $('#imgViewModal').modal('show')
 }
 
@@ -50,7 +49,9 @@ $(document).ready((e) => {
     let notifyLock = false
     let inputLocked = false
 
-    let urlBoardPath = location.pathname.split('/')[1]
+    let urlBoardPath = $('#boardPath').val()
+    let bdgePath = $('#bdgePath').val()
+    if (!bdgePath) bdgePath = ''
 
     const smm = {
         FATAL : 'fatal',
@@ -111,7 +112,7 @@ $(document).ready((e) => {
         let name = file.name
         if (name.length > 30) name = name.substr(0, 30) + '...'
 
-        let fileFrame = `<img id="imgItem-${file.id}" src="${file.base64}" onerror="this.src='/pub/404.jpg'">`
+        let fileFrame = `<img id="imgItem-${file.id}" src="${file.base64}" onerror="this.src='${bdgePath}/pub/404.jpg'">`
         if (type === 'video') fileFrame = `<video id="videoItem-${file.id}" controls="" loop=""><source src="${file.base64}" /></video>`
         if (type === 'audio') fileFrame = `<audio id="audioItem-${file.id}" controls="" loop=""><source src="${file.base64}" /></audio>`
 
@@ -120,7 +121,7 @@ $(document).ready((e) => {
                 ${fileFrame}
                 <small class="file-info">${name} / ${file.size}</small>
                 <div class="btn-file-remove" id="btnRemoveFile">
-                    <img src="/pub/btn_hide.png" />
+                    <img src="${bdgePath}/pub/btn_hide.png" />
                 </div>
             </div>
         `).fadeIn(200)
@@ -215,7 +216,7 @@ $(document).ready((e) => {
 
     function connectSocket(board, callback) {
         $('#layerContent').css('opacity', 0.4)
-        setUrl(`/${board}`)
+        setUrl(`${bdgePath}/${board}`)
         setTitle(`/${board}/ Express - 78Station`)
 
         if (socket) socket.disconnect()
@@ -373,7 +374,7 @@ $(document).ready((e) => {
             $(e.target).css('cursor', 'wait')
             if (tinRef) clearTimeout(tinRef)
             tinRef = setTimeout(() => {
-                fetch(`/${board}/reply/${replyId}`, {
+                fetch(`${bdgePath}/${board}/reply/${replyId}`, {
                     method: 'GET',
                     headers: { 'Content-Type' : 'text/html; charset=utf-8' },
                 })
