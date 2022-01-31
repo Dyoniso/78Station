@@ -5,13 +5,17 @@ const fs = require('fs')
 
 exports.MODE_BRIDGE = false
 
-exports.init = (path, app, p, io) => {
-    app.use('/' + p.route + '/files', express.static(path + '/public/files'))
-    app.use('/' + p.route + '/pub', express.static(path + '/public/lib'))
-    app.use('/' + p.route + '/pub', express.static(path + '/public/js'))
-    app.use('/' + p.route + '/pub', express.static(path + '/public/css'))
-    app.use('/' + p.route + '/pub', express.static(path + '/public/assets'))
+exports.static = (app, path, route) => {
+    let br = ''
+    if (p.route && p.route.length > 0) br = '/'
+    app.use(br + route + '/files', express.static(path + '/public/files'))
+    app.use(br + route + '/pub', express.static(path + '/public/lib'))
+    app.use(br + route + '/pub', express.static(path + '/public/js'))
+    app.use(br + route + '/pub', express.static(path + '/public/css'))
+    app.use(br + route + '/pub', express.static(path + '/public/assets'))
+}
 
+exports.init = (path, app, p, io) => {
     module.exports.app = app
     module.exports.io = io
     exports.MODE_BRIDGE = true

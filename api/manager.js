@@ -197,10 +197,10 @@ async function getBoardTitle(board) {
 }
 
 //ENV
-let siteUrl = process.env.SITE_URL
-let adminPassword = process.env.ADMIN_PASSWORD
-let boardSize = parseInt(process.env.BOARD_SIZE)
-let pageSize = parseInt(process.env.PAGE_SIZE)
+let siteUrl = process.env.ST_SITE_URL
+let adminPassword = process.env.ST_ADMIN_PASSWORD
+let boardSize = parseInt(process.env.ST_BOARD_SIZE)
+let pageSize = parseInt(process.env.ST_PAGE_SIZE)
 if (!siteUrl) siteUrl = 'localhost'
 if (!adminPassword) adminPassword = 'admin'
 if (isNaN(boardSize) || boardSize <= 0) boardSize = 200
@@ -208,7 +208,7 @@ if (isNaN(pageSize) || pageSize <= 0) boardSize = 20
 
 
 //Socket.io
-let boardInterval = process.env.BOARD_INTERVAL
+let boardInterval = process.env.ST_BOARD_INTERVAL
 let waitList = []
 
 function checkWaitList(uid) {
