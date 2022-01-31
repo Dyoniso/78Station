@@ -5,11 +5,13 @@ let reset = "\x1b[0m"
 let red = "\x1b[31m"
 let yellow = "\x1b[33m"
 let magenta = "\x1b[35m"
+let black = "\x1b[30m"
 
 let bgBlue = "\x1b[44m"
 let bgRed = "\x1b[41m"
 let bgMagenta = "\x1b[45m"
 let bgYellow = "\x1b[43m"
+let bgWhite = "\x1b[47m"
 
 const logLevels = {
   levels: {
@@ -43,6 +45,7 @@ class LoggerService {
         })
       ],
       format: winston.format.printf((info) => {
+        let MODE_BRIDGE = require('../bridge').MODE_BRIDGE
         let strRoute = info.level === 'fatal' ? 'crash.log' : route + '.log'
         let b64 = this.log_data ? this.log_data.base64 : null
         if (b64 && b64.length > 300) this.log_data.base64 = b64.substring(0, 300) + '...'
@@ -54,7 +57,7 @@ class LoggerService {
         if (info.level === 'fatal') strInfo = bgRed + level
         if (info.level === 'ok') strInfo = bgMagenta + level
 
-        let message = `${cyan}${dateFormat()} ${reset}| ${strInfo}${reset} |${red} ${strRoute} ${reset}| ${info.message} | `
+        let message = `${cyan}${dateFormat()} ${reset}| ${MODE_BRIDGE ? `${bgWhite}${black}BRIDGE${reset} | ` : ''}${strInfo}${reset} |${red} ${strRoute} ${reset}| ${info.message} | `
         message = info.obj ? message + `${info.level === 'fatal' ? `${red}exeption:${JSON.stringify(info.obj)}` : `${yellow}data:${JSON.stringify(info.obj)}`} ${reset}| ` : message
         message = this.log_data ? message + `${yellow}log_data:${JSON.stringify(this.log_data)} ${reset}| ` : message
         return message

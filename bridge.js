@@ -1,6 +1,5 @@
 const express = require('express')
 const Logger = require('./api/logger')
-const logger = new Logger('78station')
 const fs = require('fs')
 
 exports.MODE_BRIDGE = false
@@ -16,6 +15,8 @@ exports.static = (app, path, route) => {
 }
 
 exports.init = (path, app, p, io) => {
+    const logger = new Logger(p.name)
+
     module.exports.app = app
     module.exports.io = io
     exports.MODE_BRIDGE = true

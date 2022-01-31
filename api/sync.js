@@ -1,8 +1,14 @@
-const db = require('./database')
-const Logger = require('./logger')
-const logger = new Logger('app')
-const fm = require('./fileManager')
 const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
+const Logger = require('./logger')
+let logger
+if (MODE_BRIDGE) {
+    logger = new Logger(require('../bridge').P.name)
+} else {
+    logger = new Logger('app')
+}
+
+const db = require('./database')
+const fm = require('./fileManager')
 if (MODE_BRIDGE) DEFAULT_BOARDS = require('../bridge').DEFAULT_BOARDS
 else DEFAULT_BOARDS = require('../app').DEFAULT_BOARDS
 

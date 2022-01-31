@@ -1,6 +1,13 @@
-const md5 = require('md5')
+const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
 const Logger = require('./logger')
-const logger = new Logger('app')
+let logger
+if (MODE_BRIDGE) {
+    logger = new Logger(require('../bridge').P.name)
+} else {
+    logger = new Logger('app')
+}
+
+const md5 = require('md5')
 
 exports.uidGen = (req, res, next) => {
     if (req.ip) {

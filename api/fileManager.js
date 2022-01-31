@@ -1,11 +1,16 @@
-require('dotenv').config()
+const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
 const Logger = require('./logger')
-const logger = new Logger('app')
+let logger
+if (MODE_BRIDGE) {
+    logger = new Logger(require('../bridge').P.name)
+} else {
+    logger = new Logger('app')
+}
+
+require('dotenv').config()
 const fs = require('fs')
 const db = require('./database')
-const utils = require('./utils')
 const ffmpeg = require('fluent-ffmpeg')
-const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
 
 const dirName = { 
     files : 'files',
