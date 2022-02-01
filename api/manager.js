@@ -1,6 +1,8 @@
 const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
 const Logger = require('./logger')
-let app = io = logger = null
+let app
+let io
+let logger
 if (MODE_BRIDGE) {
     logger = new Logger(require('../bridge').P.name)
     app = require('../bridge').app
@@ -224,11 +226,11 @@ function checkWaitList(uid) {
     return false
 }
 
-io.of('board').use((socket, next) => {
+io.of(bdgePath + '/board').use((socket, next) => {
     return middle.uidGenSocket(socket, next)
 })
 
-io.of('board').on('connection', async(socket) => {
+io.of(bdgePath + '/board').on('connection', async(socket) => {
     let handshakeData = socket.request;
     let board = handshakeData._query['board']
     let uid = socket.uid
@@ -313,7 +315,7 @@ io.of('board').on('connection', async(socket) => {
         }
 
         if (delCountReplies > 0) {
-            for (s of io.of('/board').sockets.values()) {
+            for (s of io.of(bdgePath + '/board').sockets.values()) {
                 if (s.board === board) {
                     s.emit('channel reply delete', replyUpdated)
                 }
@@ -482,7 +484,7 @@ io.of('board').on('connection', async(socket) => {
                     mentionReplyById(r, q.id)
                     mentionBundle.push({ id : r, quoted : q.id })
                 }
-                for (s of io.of('/board').sockets.values()) {
+                for (s of io.of(bdgePath + '/board').sockets.values()) {
                     if (s.board === board) {
                         s.emit('channel reply mentions', mentionBundle)
                     }
@@ -528,7 +530,7 @@ io.of('board').on('connection', async(socket) => {
                             replyUpdated.push(q.id)
                         }
 
-                        for (s of io.of('/board').sockets.values()) {
+                        for (s of io.of(bdgePath + '/board').sockets.values()) {
                             if (s.board === board) {
                                 s.emit('channel reply delete', replyUpdated)
                             }
@@ -547,7 +549,7 @@ io.of('board').on('connection', async(socket) => {
                     board : board,
                     bdgePath : bdgePath
                 })
-                for (s of io.of('/board').sockets.values()) {
+                for (s of io.of(bdgePath + '/board').sockets.values()) {
                     if (s.board === board && s.uid === uid) {
                         reply.self = true
                         let access = '.'
@@ -567,6 +569,7 @@ io.of('board').on('connection', async(socket) => {
             }
 
         } catch (err) {
+            throw err
             logger.error('Error in register reply in db', err)
             throwMessage(smm.ERROR, 'Error in create reply!')
         }

@@ -196,6 +196,7 @@ $(document).ready((e) => {
 
             case smm.ERROR:
                 error = true
+                unlockInput()
 
             case smm.SUCCESS:
                 let el = $('#postMessage')
@@ -209,6 +210,7 @@ $(document).ready((e) => {
                 else el.css({'color' : 'green'})
                 if (!el.is(':visible')) el.slideToggle(100)
                 messageTimeout = setTimeout(() => el.slideToggle(100), 5000)
+                unlockInput()
                 break
         }
         $('#layerContent').css('opacity', 1)
@@ -221,7 +223,7 @@ $(document).ready((e) => {
 
         if (socket) socket.disconnect()
 
-        socket = io('/board', { query : { board : board } })
+        socket = io(bdgePath + '/board', { query : { board : board } })
         socket.off('connect').on('connect', () => {  
             updateSocketListeners()
             boardPath = board
@@ -687,6 +689,7 @@ $(document).ready((e) => {
             isFinish = true
 
             hideDelBtn()
+            unlockInput()
             finalizeLatencyStatus()
             clearInput()
 

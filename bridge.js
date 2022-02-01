@@ -25,13 +25,15 @@ exports.init = (path, app, p, io) => {
 
     let DEFAULT_BOARDS = []
     try {
-        if (fs.existsSync('./boards.json')) DEFAULT_BOARDS = JSON.parse(fs.readFileSync('./boards.json'))
+        if (fs.existsSync(path + '/boards.json')) DEFAULT_BOARDS = JSON.parse(fs.readFileSync(path + '/boards.json'))
     } catch (err) {
         logger.fatal('Error after get boards file. Check the file syntax')
     }
     exports.DEFAULT_BOARDS = DEFAULT_BOARDS
 
     let ms = Math.floor(process.hrtime()[0] * 1000000 + process.hrtime()[1] / 1000) + 'ms'
-    exports.manager = require('./api/manager')
-    logger.ok(`Api Manager Started! [${ms}]`)
+    exports.sync = require('./api/sync').init(() => {
+        exports.manager = require('./api/manager')
+        logger.ok(`Api Manager Started! [${ms}]`)
+    })
 }

@@ -5,7 +5,7 @@ const MODE_BRIDGE = require('../bridge').MODE_BRIDGE
 if (MODE_BRIDGE) {
     let p = require('../bridge').P
     databaseUrl = process.env.DATABASE_URL + '/' + p.db
-} else databaseUrl = process.env.DATABASE_UR
+} else databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) throw new Error('Env config not found: DATABASE_URL, check your env file')
 const db = promise(databaseUrl)
 

@@ -50,8 +50,11 @@ exports.generateHash = (length) => {
 let bdgePath = ''
 if (MODE_BRIDGE) bdgePath = require('../bridge').path
 exports.renderHtml = (res, path, o) => {
-    let access = './public/pug'
-    if (MODE_BRIDGE) access = bdgePath + '/public/pug'
-    let html = o ? pug.renderFile(access + path, o) : pug.renderFile(access + path)
-    return res.status(200).send(html).end()
+    let access = '.'
+    if (MODE_BRIDGE) {
+        access = bdgePath + '/public/pug'
+        let html = o ? pug.renderFile(access + path, o) : pug.renderFile(access + path)
+        return res.status(200).send(html).end()
+    } 
+    return o ? res.render(access + path, o) : res.render(access + path)
 }
