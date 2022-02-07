@@ -175,8 +175,8 @@ function translateContent(content, board) {
     content = content
     .replace(rexhttp, '<a href="$1">$1</a>')
     .replace(rexSpoiler, '<span class="spoiler-content">$1</span>')
-    .replace(rexQuoteBoard, `<a href="/$1" class="quote-board boardBtn" data-path="$1">&gt;&gt;&gt;/$1/</a>`)
-    .replace(rexQuoteReply, `<a href="/${board}#$1" class="quote-reply">&gt;&gt;$1</a>`)
+    .replace(rexQuoteBoard, `<a href="${bdgePath}/$1" class="quote-board boardBtn" data-path="$1">&gt;&gt;&gt;/$1/</a>`)
+    .replace(rexQuoteReply, `<a href="${bdgePath}/${board}#$1" class="quote-reply">&gt;&gt;$1</a>`)
     .replace(rexQuote, '<span class="quote">&gt;$1</span>')
     .replace(rexIvQuote, '<span class="iv-quote">&lt;$1</span>')
     .replace(rexBold, '<span class="td-bold">$1</span>')
