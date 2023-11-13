@@ -1,5 +1,5 @@
 # 78Station
-78Station realtime imageboard
+Realtime Chat Project
 
 # Instalation
 Clone the Midback repository:
